@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+    <typeAliases>
+		<typeAlias alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+		<typeAlias alias="CmmVO" type="krgz.cmm.service.CmmVO"/>
+		<typeAlias alias="SearchVO" type="krgz.search.service.SearchVO"/>
+		<typeAlias alias="UsrVO" type="krgz.user.service.UserVO"/>
+		<typeAlias alias="AdmGrpVO" type="krgz.adm.grp.service.AdmGrpVO"/>
+		<typeAlias alias="LogTrackerVO" type="krgz.log.service.LogTrackerVO"/>
+		<typeAlias alias="ProgressVO" type="krgz.progress.service.ProgressVO"/>
+		<typeAlias alias="LayerVO" type="krgz.layer.service.LayerVO"/>
+    </typeAliases>
+</configuration>

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UsrDAO">
+
+	<select id="selectUsrId" parameterType="String" resultType="java.lang.Integer">
+		<![CDATA[
+			SELECT count(*) FROM lumus."TBL_USER" WHERE usr_id='${value}'
+		 ]]>
+	</select>
+	
+	<select id="selectEml" parameterType="String" resultType="java.lang.Integer">
+		<![CDATA[
+			SELECT count(*) FROM lumus."TBL_USER" WHERE eml='${value}'
+		 ]]>
+	</select>
+	
+	<select id="selectUsrInfo" parameterType="UsrVO" resultType="UsrVO">
+		<![CDATA[
+			SELECT * 
+			FROM lumus."TBL_USER" as u 
+			INNER JOIN lumus."TBL_USER_GROUP" as g
+			ON u.grp_id  = g.grp_id
+			WHERE u.usr_id=#{usr_id};
+		]]>
+	</select>
+	
+	<insert id="insertUsrInfo" parameterType="java.util.HashMap">
+		INSERT INTO lumus."TBL_USER"
+		(
+			usr_id,
+			usr_nm,
+			eml,
+			pwd,
+			inst,
+			dept,
+			telno,
+			reg_date,
+			prvc_clct_agre_yn
+		)
+		VALUES
+		(
+			#{usrId},
+			#{usrNm},
+			#{eml},
+			#{pwd},
+			#{inst},
+			#{dept},
+			#{telno},
+			TO_CHAR(now(), 'YYYY-MM-DD HH24:MI:SS'),
+			#{infoAgr}
+		)
+	</insert>
+	
+	<update id="updateUsrInfo" parameterType="UsrVO">
+		<![CDATA[
+			UPDATE
+				lumus."TBL_USER"
+			SET
+				eml = #{eml},
+				pwd = #{pwd},
+				telno = #{telno},
+				inst = #{inst},
+				dept = #{dept},
+				mdfr= #{usr_id},
+				mod_date = TO_CHAR(now(), 'YYYY-MM-DD HH24:MI:SS')
+			WHERE
+				usr_no = #{usr_no}
+		 ]]>
+	</update>
+	
+	<delete id="deleteUsrInfo" parameterType="String">
+		<![CDATA[
+			DELETE FROM lumus."TBL_USER" WHERE usr_no='${value}'
+		]]>
+	</delete>
+	
+	<select id="checkLogin" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			usr_no,
+			usr_id,
+			usr_nm,
+			eml,
+			pwd,
+			grp_id,
+			login_count
+		FROM
+			lumus."TBL_USER"
+		WHERE
+			usr_id=#{usrId}
+	</select>
+	
+	<select id="selectFindUsrId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		<![CDATA[
+			SELECT usr_id, grp_id FROM lumus."TBL_USER" WHERE usr_nm=#{usrNm} AND eml=#{eml}
+		]]>
+	</select>
+	
+	<select id="selectFindPwd" parameterType="UsrVO" resultType="java.lang.Integer">
+		<![CDATA[
+			SELECT count(*) FROM lumus."TBL_USER" WHERE usr_no=#{usr_no} AND usr_nm=#{usr_nm} AND eml=#{eml}
+		]]>
+	</select>
+	
+	<update id="updateUsrPw" parameterType="UsrVO">
+		<![CDATA[
+			UPDATE
+				lumus."TBL_USER"
+			SET
+				pwd = #{pwd},
+				tmpr_pwd_yn = #{tmpr_pwd_yn},
+				login_count = 0
+			WHERE
+				usr_id = #{usr_id}
+		]]>
+	</update>
+	
+	<!-- 사용자가 로그인 시도 실패시 카운트 -->
+	<update id="updateLoginCount" parameterType="UsrVO">
+	<![CDATA[
+		UPDATE
+			lumus."TBL_USER"
+		SET
+			login_count = CAST(#{login_count} AS INTEGER)+1
+		WHERE
+			usr_id = #{usr_id}
+	]]>
+	</update>
+	
+	<update id="resetLoginCount" parameterType="UsrVO">
+	<![CDATA[
+		UPDATE
+			lumus."TBL_USER"
+		SET
+			login_count = 0
+		WHERE
+			usr_id = #{usr_id}
+	]]>
+	</update>
+	
+	<update id="updateUsrLoginDate" parameterType="UsrVO">
+		UPDATE
+			lumus."TBL_USER"
+		SET
+			last_login = TO_CHAR(now(), 'YYYY-MM-DD HH24:MI:SS')
+		WHERE
+			usr_id = #{usr_id}
+	</update>
+</mapper>

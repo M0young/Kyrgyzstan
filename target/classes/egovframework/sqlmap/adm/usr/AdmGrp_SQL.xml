@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="AdmGrpDAO">
+	<select id="selectGrpList" resultType="AdmGrpVO">
+		<![CDATA[
+			SELECT * 
+			FROM lumus."TBL_USER_GROUP"
+			ORDER BY reg_date DESC
+		]]>
+	</select>
+	
+	<select id="selectGrpCount" resultType="java.lang.Integer">
+		<![CDATA[
+			SELECT COUNT(*) AS TOTAL 
+			FROM lumus."TBL_USER_GROUP"
+		]]>
+	</select>
+	
+	<select id="selectGrpInfoUsrCount"  parameterType="AdmGrpVO" resultType="java.lang.Integer">
+		<![CDATA[
+			SELECT COUNT(*)
+			FROM lumus."TBL_USER"
+			WHERE grp_id = #{grp_id}
+		]]>
+	</select>
+	
+	<select id="countByGrpId" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM lumus."TBL_USER_GROUP" WHERE grp_id = #{grpId}
+    </select>
+
+    <select id="countByGrpNm" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM lumus."TBL_USER_GROUP" WHERE grp_nm = #{grpNm}
+    </select>
+    
+	<insert id="insertGrpInfo" parameterType="java.util.HashMap">
+		INSERT INTO lumus."TBL_USER_GROUP"
+		(
+			grp_id,
+			grp_nm,
+			rgtr,
+			reg_date,
+			author_menu
+		)
+		VALUES
+		(
+			#{grpId},
+			#{grpNm},
+			#{rgtr},
+			TO_CHAR(now(), 'YYYY-MM-DD HH24:MI:SS'),
+			#{authorMenu}
+		)
+	</insert>
+	
+	<update id="updateGrpStat" parameterType="java.util.HashMap">
+		<![CDATA[
+			UPDATE
+				lumus."TBL_USER_GROUP"
+			SET
+				mdfr = #{mdfr},
+				mod_date = TO_CHAR(now(), 'YYYY-MM-DD HH24:MI:SS'),
+				srvc_yn = #{srvcYn}
+			WHERE
+				grp_id = #{grpId}
+		 ]]>
+	</update>
+	
+	<update id="updateGrpInfo" parameterType="java.util.HashMap">
+		<![CDATA[
+			UPDATE
+				lumus."TBL_USER_GROUP"
+			SET
+				grp_nm = #{grpNm},
+				mdfr = #{mdfr},
+				mod_date = TO_CHAR(now(), 'YYYY-MM-DD HH24:MI:SS'),
+				author_menu = #{authorMenu}
+			WHERE
+				grp_id = #{grpId}
+		 ]]>
+	</update>
+	
+	<delete id="deleteGrpInfo" parameterType="java.util.HashMap">
+		<![CDATA[
+			DELETE FROM lumus."TBL_USER_GROUP" WHERE grp_id = #{grpId};
+		 ]]>
+	</delete>
+</mapper>

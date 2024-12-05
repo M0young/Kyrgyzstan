@@ -1,0 +1,65 @@
+--svn
+주소 : https://192.168.50.230:8443/svn/krgz
+계정 : 이름 이니셜
+
+--디렉토리 명칭
+관리자 adm
+	|(하위폴더 생성)
+	- 사용자 관리 user
+	- 메뉴 권한 관리 menu
+공통 cmm
+이미지 맵 layer
+수확량 예측 predict
+통계 stats
+대시보드 dashboard
+
+--JAVA
+목록 조회 : select[디렉토리 or 데이터명칭]List.do 
+단건 조회 : select[디렉토리 or 데이터명칭].do 
+수정 : update[디렉토리 or 데이터명칭].do 
+삭제 : delete[디렉토리 or 데이터명칭].do 
+등록 : insert[디렉토리 or 데이터명칭].do 
+* 수정, 삭제, 등록도 다중일 경우 뒤에 List
+ex) selectIotList.do
+
+--javascript
+var ANALY = {
+	list:function(){};
+	update:function(){};
+	select:function(){};
+	delete:function(){};
+}
+
+한 모듈안에 여러개 기능일 경우
+var ANALY = {
+	WIND:{
+		list:function(){};
+		update:function(){};
+		select:function(){};
+		delete:function(){};
+	},
+	PH:{
+		list:function(){};
+		update:function(){};
+		select:function(){};
+		delete:function(){};
+	}
+}
+
+--JSP 객체 ID
+input : [디렉토리]Ip[명칭]
+lable : [디렉토리]Lb[명칭]
+check : [디렉토리]Ck[명칭]
+div : [디렉토리]Di[명칭]
+form : [디렉토리]Fm[명칭]
+ul : [디렉토리]Ul[명칭]
+button : [디렉토리]Bt[명칭]
+radio : [디렉토리]Rd[명칭]
+
+--JSP 파일
+list
+update
+delete
+select
+메인 정보 조작이 아닌 서브기능 화면 일 경우
+[기능]List~Select

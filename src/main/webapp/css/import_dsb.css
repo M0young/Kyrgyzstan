@@ -1,0 +1,8 @@
+/* Font Familly*/
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap');
+
+/* CSS */
+@import url('../css/reset.css');
+@import url('../css/common.css');
+@import url('../css/global.css');
+@import url('../css/dashboard.css');

@@ -1,0 +1,381 @@
+/* 팝업 기본 설정 */
+.hide{display: none;}
+.popup{
+    display: none; position: absolute; z-index: 8; box-shadow: 5px 5px 5px rgba(0,0,0,0.75);
+}
+.popup.center{
+    transform: translateX(-50%) translateY(-50%);
+}
+.popup.active,
+.popup-Bg.active{display: block;}
+.popup-Bg{
+    display: none; background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px);
+    width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 9;
+}
+/* 팝업 타이틀 */
+.popup-tit{display: flex; width: 100%; margin-bottom: 10px; line-height: 25px; position: relative; padding-left: 35px; font-size: 14px;}
+.popup-tit i{left: 0; width: 25px; height: 25px;}
+
+.result-ct{text-align: right; margin-left: 10px; border: 1px solid var(--c-lnv); color: #fff; background-color: var(--c-lnv); border-radius: 1px;}
+
+/*=========================================
+    Upload-Pop - 업로드 팝업
+=========================================*/
+.Upload-Pop.active{z-index: 10;}
+.Upload-Pop{width: 32.5%; left: 50%; top: 50%; min-width: 610px; max-width: 620px; min-height: 320px; height: auto; padding: 15px; background-color: #fff;}
+.Upload-Pop .popup-tit{color: #1f2933;}
+.Upload-Pop .popup-wrap{width: 100%; height: calc(100% - 35px);}
+.Upload-Pop .tab-tit{display: flex; font-size: 12px; align-items: center; width: 100%; justify-content: space-between;}
+/* tab container
+.Upload-Pop .popup-wrap .tab-tit li.active{border-color: var(--c-lnv); background-color: #1f2933; color: #fff;}
+.Upload-Pop .popup-wrap .tab-tit li:not(:first-of-type){border-left:  1px solid rgba(181, 181, 194, 0.3);}
+.Upload-Pop .popup-wrap .tab-tit li{cursor: pointer; background-color: rgba(181, 181, 194, 0.1); color: #6f6e7a; display: flex; width: calc(100% / 3); height: 27px; line-height: 25px; justify-content: center; box-sizing: border-box; border-bottom: 4px solid transparent; white-space: nowrap; text-align: center; text-overflow: ellipsis; overflow: hidden;}
+.Upload-Pop .popup-wrap .tab-container{width: 100%; height: calc(100% - 72px); background-color: rgba(181, 181, 194, 0.1); border: 1px solid rgba(181, 181, 194, 0.3);}
+.Upload-Pop .popup-wrap .tab-container>div{display: block;}
+.Upload-Pop .popup-wrap .tab-container>div.active{display: flex;}
+1-upload select
+.Upload-Pop .popup-wrap .tab-container .upload-Box{width: 100%; height: 250px; display: none; flex-direction: column; align-items: center; justify-content: center; position: relative;}
+.Upload-Pop .popup-wrap .tab-container .upload-Box .Upload-container{display: block; width: 100%; height: 100%; position: absolute; cursor: pointer; z-index: -1;}
+.Upload-Pop .popup-wrap .tab-container .upload-Box input[type='file']{display: block; width: 100%; height: 100%; position: absolute;}
+.Upload-Pop .popup-wrap .tab-container .upload-Box p{font-size: 14px; font-weight: 800; line-height: 25px; color: #1f2933; text-align: center;}
+.Upload-Pop .popup-wrap .tab-container .upload-Box small{font-size: 12px; font-weight: 500; color: #b5b5c2; display: block; text-align: center;}
+.Upload-Pop .popup-wrap .btn-wrap{height: 25px; display: flex; gap: 5px; margin: 10px 0; justify-content: space-between; align-items: center;}
+.Upload-Pop .popup-wrap .btn-wrap .wrong-Notice::before{content: ''; background-image: url('../Images/notice-ico.svg'); width: 15px; height: 15px; background-size: contain; background-repeat: no-repeat; display: block; margin-right: 5px;}
+wrong-coment
+.Upload-Pop .popup-wrap .btn-wrap .wrong-Notice{display: flex; width: 30%; text-align: left; color: #ff4b5c; font-size: 10px; font-weight: 700; white-space: nowrap; text-align: left; overflow: hidden; text-overflow: ellipsis; line-height: 15px;}
+Upload Prev/Next Button
+.Upload-Pop .popup-wrap .btn-wrap .nav-Btn{display: flex; gap: 5px; width: 40%; justify-content: center;}
+.Upload-Pop .popup-wrap .btn-wrap .nav-Btn button{border: 1px solid var(--c-lnv); background-color: var(--c-lnv); border-radius: 3px;}
+.Upload-Pop .popup-wrap .btn-wrap .Prv-Btn{transform: rotate(180deg);}
+Upload file delete/Cancel Button
+.Upload-Pop .popup-wrap .btn-wrap .btn-Box{display: flex; justify-content: flex-end; gap: 5px; width: 30%;}
+.Upload-Pop .popup-wrap .btn-wrap .btn-Box>div.active{display: block;}
+.Upload-Pop .popup-wrap .btn-wrap .btn-Box>div{display: none;}
+.Upload-Pop .popup-wrap .btn-wrap .btn-Box button{border: 1px solid var(--c-lnv); color: #fff; padding: 0 10px; font-size: 12px; line-height: 25px; background-color: var(--c-lnv); border-radius: 3px; transition: all 0.3s ease-in-out;}
+.Upload-Pop .popup-wrap .btn-wrap .btn-Box button:hover{background-color: transparent; color: #1f2933;}
+------------------------
+    tab 1 - upload List
+------------------------
+.Upload-Pop .popup-wrap .tab-container .upload-Box .upload-List{
+    width: 100%; height: 100%; display: flex; flex-direction: column; padding: 10px;
+}
+counter
+.Upload-Pop .popup-wrap .tab-container .upload-Box .upload-List label{font-size: 12px; font-weight: 800; color: #1f2933; line-height: 20px; display: block;}
+.Upload-Pop .popup-wrap .tab-container .upload-Box .upload-List label input{margin: 0 10px 10px; background-color: var(--c-lnv); color: #fff; font-size: 12px; border: 1px solid var(--c-lnv); width: 80px; padding: 0 10px; line-height: 25px; height: 27px; text-align: right;}
+.Upload-Pop .popup-wrap .tab-container .upload-Box .upload-List ul{width: 100%; display: flex; flex-wrap: wrap; height: calc(100% - 37px); overflow-y: auto; padding: 5px 10px 5px 0;}
+.Upload-Pop .popup-wrap .tab-container .upload-Box .upload-List ul li{display: flex; flex-direction: column; margin-bottom: 5px; position: relative; width: calc((100% - 20px) / 5); font-size: 12px; height: 80px; border: 1px solid var(--c-gr2); box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.5); background-color:#fff;}
+.Upload-Pop .popup-wrap .tab-container .upload-Box .upload-List>ul>li>.delete-btn{left: 2px; top: 2px;}
+
+spacing
+.Upload-Pop .popup-wrap .tab-container .upload-Box .upload-List ul li:not(:first-of-type,:nth-child(5n+1)){margin-left: 5px;}
+.Upload-Pop .popup-wrap .tab-container .upload-Box .upload-List ul li figure{display: block; width: 100%; height: 45px; margin: 0 auto; text-align: center; background-color: rgba(181, 181, 194, 0.5);}
+.Upload-Pop .popup-wrap .tab-container .upload-Box .upload-List ul li figure img{display: block; width: 100%; max-height: 45px;}
+.Upload-Pop .popup-wrap .tab-container .upload-Box .upload-List ul li figure figcaption{background-color: #fff; padding: 4px; font-size: 10px; display: block; line-height: 12px; font-weight: 500; color: #6f6e7a; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;}
+.Upload-Pop .popup-wrap .tab-container .upload-Box .upload-List ul li figure figcaption small{display: block; text-align: left; font-size: 10px;}
+
+------------------------
+    tab 2 / tab 3 - upload-information
+------------------------
+.upload-inform{display: flex; height: 380px; padding: 10px;}
+.upload-inform>div:first-of-type{border-right: 1px solid var(--c-gr3);}
+.upload-inform>div:not(:first-of-type){margin-left: 10px;}
+.upload-inform>div{width: calc((100% - 10px) / 2); height: 100%; overflow-y: auto; overflow-x: hidden; padding-right: 10px;}
+2-1 정보입력 란
+.upload-inform .inform-Box>ul{display: flex; flex-direction: column;}
+.upload-inform .inform-Box>ul>li{font-size: 12px; display: block; margin-bottom: 5px; color: var(--c-gr5);}
+.upload-inform .inform-Box>ul>li label{display: block; width: 100%; line-height: 25px; margin-bottom: 5px; color: var(--c-lnv); font-weight: 700;}
+.upload-inform .inform-Box>ul>li p{
+    font-size: 11px; color: #1f2933; line-height: 20px;
+}
+.upload-inform .inform-Box>ul>li input{line-height: 25px; height: 27px; color: var(--c-gr5); border: 1px solid var(--c-gr4); border-radius: 3px; width: 100%; display: block;}
+.upload-inform .inform-Box>ul>li.Upload-container{position: relative;}
+.upload-inform .inform-Box>ul>li.Upload-container>.inform-content:hover{background-color: transparent; color: var(--c-gr7);}
+.upload-inform .inform-Box>ul>li.Upload-container>.inform-content{width: 85px; display: block; position: absolute; right: 0; bottom: 0; background-color: var(--c-gr7); margin-bottom: 0; cursor: pointer; text-align: center; overflow: hidden;color: #fff; border-left: 1px solid var(--c-gr4);}
+.upload-inform .inform-Box>ul>li.Upload-container>.inform-content>input[type='file']{width: 0;height: 0;opacity: 0;}
+.upload-inform .inform-Box>ul>li .select-Box,
+.upload-inform .inform-Box>ul>li .select-Box select{width: 100%;}
+.upload-inform .inform-Box>ul>li .select-Box select{border-color: var(--c-gr4);}
+2-2 업로드 확인 란
+업로드카운터
+.upload-inform .readOnly-inform .btn-wrap{width: 100%; margin-bottom: 5px;}
+.upload-inform .readOnly-inform .btn-wrap>label{display: flex; align-items: center; justify-content: flex-end; width: 100%; font-size: 12px; }
+.upload-inform .readOnly-inform .btn-wrap>label>input{line-height: 25px; margin-left: 5px; height: 27px; color: #fff; border: 1px solid var(--c-lnv); background-color: var(--c-lnv); text-align: right; width: 60px; }
+업로드 리스트
+.upload-inform .readOnly-inform>ol{width: 100%; height: calc(100% - 41px); overflow-y: auto; padding: 5px 0 5px 5px;}
+.upload-inform .readOnly-inform>ol>li:hover{background-color: transparent;}
+.upload-inform .readOnly-inform>ol>li{padding: 0 5px; transition: all 0.3s ease-in-out; background-color: rgba(0,0,0,0.1); border: 1px solid var(--c-gr2); position: relative; font-size: 12px; color: #6f6e7a; line-height: 20px; margin-bottom: 5px; width: 100%; border-radius: 3px;}
+.upload-inform .readOnly-inform>ol>li strong,
+.upload-inform .readOnly-inform>ol>li span{display: inline-block; white-space: nowrap;}
+.upload-inform .readOnly-inform>ol>li strong{width: 50%;}
+.upload-inform .readOnly-inform>ol>li span{width: 50%; padding-right: 15px;}
+.upload-inform .readOnly-inform>ol>li>.delete-btn{right: 10px; top: 50%; transform: translateY(-50%);}
+.upload-inform .readOnly-inform>ol>li>.delete-btn:hover{background-color: rgba(255,255,255,0.8);}
+
+------------------------
+    tab 3 - upload 
+------------------------
+.readOnly-inform>ol>li{background-color: transparent; padding: 0 !important;}
+.readOnly-inform>ol>li>figure{width: 100%; display: flex; align-items: center; padding: 0; margin: 0; background-color: #fff;}
+.readOnly-inform>ol>li>figure img{display: block; width: 100%; max-width: 20%; height: 100%; background-color: var(--c-gr2);}
+.readOnly-inform>ol>li>figure figcaption{width: 80%; background-color: #fff; padding: 5px; overflow: hidden;}
+.readOnly-inform>ol>li>figure figcaption strong{display: inline-block; width: 100% !important; padding-right: 20px; position: relative; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+.readOnly-inform>ol>li>figure figcaption .delete-btn{position: absolute; top: 5px; right: 5px;} */
+
+/*=========================================
+    속성정보 팝업
+=========================================*/
+/* 속성팝업 폭조절 */
+.Attrinfor-edit.wdth{width: 30%; min-width: 560px; transition: all 0.3s ease-in-out;}
+.width-Btn{background-repeat: no-repeat; transition: all 0.3s ease-in-out; width: 25px; height: 25px; background-image: url(../Images/global-icon.svg);  display: block; border: none; position: absolute; z-index: 10; background-position: -125px -50px; top: 50%; transform: translateY(-50%); background-size: 150px 175px; right: -12.5px; background-color: var(--c-lnv); border-radius: 35px; scale: 0.8; cursor: pointer;}
+.width-Btn:hover{background-color: var(--c-g-bgr);}
+.width-Btn.active{transform: rotate(180deg) translateY(50%);}
+.Attrinfor-edit{width: 80%; height: 420px; transition: all 0.3s ease-in-out; background-color: rgba(50, 63, 75, 0.9); left: 0; bottom: 0; padding: 15px 10px 5px;}
+/* title area */
+.Attrinfor-edit .title-wrap{height: auto; display: flex; justify-content: space-between; padding-right: 25px; margin-bottom: 10px;}
+.Attrinfor-edit .popup-tit{color: #fff; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-bottom: 0; align-items: center;}
+.Attrinfor-edit .popup-tit .result-ct{margin-left: 10px; width: 50%; max-width: 100px;}
+
+.Attrinfor-edit .setting-Box{display: flex; align-items: center; gap: 5px; position: relative;}
+.Attrinfor-edit .setting-Box>.select-Box{width: 100px;}
+.Attrinfor-edit .setting-Box button:not(.Popclose-Btn, .blbtn, .delete-Btn){background-color: var(--c-lnv); border: 1px solid var(--c-lnv); color: #fff;}
+.Attrinfor-edit .setting-Box button:not(.Popclose-Btn, .blbtn, .delete-Btn) i{top: 50%; left: 50%; transform: translateX(-50%) translateY(-50%); opacity: 0.8; font-size: 18px; line-height: 20px;}
+.Attrinfor-edit .setting-Box button:not(.Popclose-Btn, .blbtn, .delete-Btn):hover i{opacity: 1;}
+.Attrinfor-edit .setting-Box label.icon{height: 25px; width: 150px;}
+.Attrinfor-edit .setting-Box label.icon .search-wt-ico{left: 5px;}
+.Attrinfor-edit .setting-Box label.icon input[type='search']{width: 100%;}
+/*====================
+    Inner popup - 1. add popup
+====================*/
+.tableTradd.active,
+.deletePop.active{display: flex;}
+.deletePop,.tableTradd{background-color: rgba(50, 63, 75, 0.9); border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 5px 5px 5px rgba(0,0,0,085);
+    position: absolute; top: 120%; height: auto; max-height: 200px;
+    overflow-y: auto; overflow-x: hidden; padding: 25px 10px 15px; z-index: 5; align-items: flex-start; flex-wrap: wrap; display: none;}
+.tableTradd{width: 74%; min-width: 230px; max-width: 250px; right: 60px;}
+.tableTradd .Popclose-Btn{right: 5px; top: 5px;}
+/* 조건박스 */
+.tableTradd .condition-Box{width: 100%; margin-bottom: 10px;}
+.tableTradd .condition-Box>li{display: flex; width: 100%; color: #fff;}
+.tableTradd .condition-Box>li:not(:last-of-type){margin-bottom: 5px;}
+.tableTradd .condition-Box>li>label,
+.tableTradd .condition-Box>li>input,
+.tableTradd .condition-Box>li>.select-Box{display: block; font-size: 12px; line-height: 20px;}
+.tableTradd .condition-Box>li>label{width: 100px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;}
+.tableTradd .condition-Box>li>input,.tableTradd .condition-Box>li>.select-Box.slbl{width: calc(100% - 100px);}
+.tableTradd .condition-Box>li>input{background-color: transparent; color: var(--c-lnv); border: 1px solid var(--c-lnv);}
+/* 하단버튼박스 */
+.tableTradd .btn-wrap{width: 100%; margin: 0 auto;}
+.tableTradd .btn-wrap button{color: var(--c-gr10); margin: 0 auto; font-size: 14px; font-weight: 700; opacity: 0.8;}
+.tableTradd .btn-wrap button:hover{opacity: 1; background-color: rgba(255, 255, 255, 0.85);}
+.tableTradd .btn-wrap button i{left: 10px;}
+
+/*====================
+    Inner popup - 2. delete popup
+====================*/
+.deletePop{width: 74%; min-width: 230px; max-width: 250px; right: 30px;}
+.deletePop .condition-Box{display: flex; align-items: center; justify-content: space-between; width: 100%;}
+.deletePop .condition-Box .select-Box{width: calc(100% - 30px);}
+.deletePop .condition-Box>button{background-color: var(--c-y1); border: 1px solid var(--c-y1); margin-left: 5px;}
+.deletePop .condition-Box>button>i{display: block; left: 0; top: 0; transform: translateX(-1px);}
+
+
+/* 메인컨텐츠 영역 */
+.Attrinfor-edit .popup-wrap{width: 100%; height: calc(100% - 80px); overflow: hidden; padding: 10px;  background-color: rgba(0,0,0,0.1);}
+.Attrinfor-edit .popup-wrap .table-wrap{overflow-x: auto; overflow-y: auto; width: 100%; height: 100%; position: relative;}
+.Attrinfor-edit .popup-wrap .table-wrap table *:not(th){font-size: 12px; color: #fff;}
+.Attrinfor-edit .popup-wrap .table-wrap table{width: 100%; height: auto; border-bottom: 1px solid rgba(255, 255, 255, 0.2);}
+.Attrinfor-edit .popup-wrap .table-wrap table thead tr{z-index: 1; position: sticky; left: 0; top: 0;}
+.Attrinfor-edit .popup-wrap .table-wrap table thead tr th{line-height: 15px; height: 30px; font-size: 12px; background-color: var(--c-gr8); color: var(--c-lnv); font-weight: 700; vertical-align: middle;}
+.Attrinfor-edit .popup-wrap .table-wrap table tbody tr:hover{background-color: rgba(0,0,0,0.3);}
+.Attrinfor-edit .popup-wrap .table-wrap table tbody tr:hover td:hover{background-color: var(--c-gr6); opacity: 1;}
+.Attrinfor-edit .popup-wrap .table-wrap table tr td{opacity: 0.95; vertical-align: middle;}
+/* table td>span align */
+.Attrinfor-edit .popup-wrap .table-wrap table td span{padding: 5px; display: inline-block; min-height: 25px; width: 100%; height: 100%;}
+.cuso{cursor: pointer;}
+.txtcenter{text-align: center;}
+.txtright{text-align: right;}
+.txtleft{text-align: left;}
+/* 위치로 이동 아이콘 */
+.Attrinfor-edit .popup-wrap .table-wrap table td span.location{position: relative; width: 100%; height: auto; min-height: 35px;}
+.Attrinfor-edit .popup-wrap .table-wrap table td span.location i{left: 50%; transform: translateX(-50%);}
+.Attrinfor-edit .popup-wrap .table-wrap table thead tr,.Attrinfor-edit .popup-wrap .table-wrap table tr:not(:last-of-type){border-bottom: 1px solid rgba(255, 255, 255, 0.2);}
+.Attrinfor-edit .popup-wrap .table-wrap table thead th:not(:first-child),.Attrinfor-edit .popup-wrap .table-wrap table td:not(:first-child){border-left: 1px solid rgba(255, 255, 255, 0.2);}
+.Attrinfor-edit .pagenation{margin: 5px 0 0; justify-content: center; position: relative;}
+.Attrinfor-edit .pagenation .pager-wrap{display: flex; align-items: center; width: 100%; justify-content: center;}
+.Attrinfor-edit .pagenation .content-wrap{display: flex; align-items: center; gap: 5px; position: absolute; right: 10px;}
+.Attrinfor-edit .pagenation .content-wrap p{color: var(--c-lnv); font-size: 12px; font-weight: 700;}
+
+/*=========================================
+    스타일 편집
+=========================================*/
+.style-edit{transition: all 0.3s ease-in-out; width: 21.875%; min-width: 420px; height: 420px;
+    background-color: rgba(50, 63, 75, 0.9); left:0; bottom: 0; padding: 15px 10px 5px;}
+/* popup title */
+.style-edit .popup-tit{color: #fff; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-bottom: 10px; align-items: center;}
+.style-edit .popup-tit .bgdimg{display: block; background-image: url('../Images/styledit-tit-ico.svg'); width: 25px; height: 25px; position: absolute; left: 0;}
+/* popup content area */
+.style-edit .popup-wrap{width: 100%; height: calc(100% - 80px); margin-bottom: 10px;}
+/* tab */
+.style-edit .popup-wrap .tab-container{width: 100%;}
+.style-edit .popup-wrap .tab-container ol.tab-tit{display: flex; align-items: center; width: 100%; border-bottom: 2px solid var(--c-gr5);}
+.style-edit .popup-wrap .tab-container ol.tab-tit li.active{border-color: var(--c-lnv); opacity: 1;}
+.style-edit .popup-wrap .tab-container ol.tab-tit li{display: inline-block; transition: all 0.3s ease-in-out; text-align: center; cursor: pointer; text-transform: capitalize; align-items: flex-start; width: 100%; padding: 10px; color: #fff; border-bottom: 2px solid transparent; opacity: 0.35; font-size: 12px; font-weight: 400;}
+/* tab detail */
+.style-edit .popup-wrap .tab-container .tab-detail-Box{width: 100%;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .tab-detail.active{display: block;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .tab-detail{display: none; padding: 5px; color: #fff; font-size: 12px;}
+.styledit-context{display: inline-block; padding-left: 10px; margin: 0; width: 40%; height: 25px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;}
+.style-wrap{width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; background-color: rgba(0,0,0,0.15); padding: 5px;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .tab-detail .style-wrap{width: 100%; height: 100%; padding: 10px;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .tab-detail .style-wrap h3{color: var(--c-lnv); margin-bottom: 15px; padding-left: 30px; line-height: 25px;  position: relative;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .tab-detail .style-wrap h3 i{left: 0;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .tab-detail .style-wrap li{width: 100%; margin-bottom: 10px;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .tab-detail .style-wrap li>div{width: 70%;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .tab-detail .style-wrap li>div>input[type="number"]{padding: 0 0 0 10px;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .tab-detail .style-wrap li>div>input{color: var(--c-lnv); background-color: transparent; line-height: 25px; border: 1px solid var(--c-lnv);}
+/*----------------
+    point
+----------------*/
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-point-tab .style-wrap>ul>li{display: flex; margin-bottom: 5px;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-point-tab .style-wrap>ul>.cond-visib{align-items: center; margin-bottom: 10px;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-point-tab .style-wrap>ul>.cond-visib .select-Box{width: 60%;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-point-tab .style-wrap>ul>.cond-sbstyle{flex-direction: column; height: 200px;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-point-tab .style-wrap>ul>.cond-sbstyle .symbolBox{width: 100%; height: calc(100% - 25px); padding: 10px; overflow: hidden; border: 1px solid rgba(103, 150, 191, 0.5); box-sizing: border-box;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-point-tab .style-wrap>ul>.cond-sbstyle .symbolBox ol{display: flex; flex-wrap: wrap; justify-content: flex-start; align-items: flex-start; width: 100%; height: auto; max-height: 100%; overflow-y: auto;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-point-tab .style-wrap>ul>.cond-sbstyle .symbolBox ol>li{cursor: pointer; width: 35px; height: 35px; border: 1px solid rgba(255,255,255,0.05); opacity: 0.8; transition: all 0.3s ease-in-out;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-point-tab .style-wrap>ul>.cond-sbstyle .symbolBox>ol>li.active,
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-point-tab .style-wrap>ul>.cond-sbstyle .symbolBox>ol>li:hover{opacity: 1; background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.7);}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-point-tab .style-wrap>ul>.cond-sbstyle .symbolBox>ol>li>img{display: block; width: 100%; max-width: 35px;}
+
+/* symbolBox common 2024-07-22 */
+.symbolBox ol{
+    padding: 0 0 25px 0;
+    display: flex; flex-wrap: wrap; justify-content: flex-start; align-items: flex-start; width: 100%; height: auto; max-height: 100%; overflow-y: auto;
+}
+.symbolBox ol>li{cursor: pointer; position: relative; width: 35px; max-width: 35px; height: 35px; border: 1px solid rgba(255,255,255,0.05); opacity: 0.8; box-sizing: border-box;}
+.symbolBox>ol>li.active,
+.symbolBox>ol>li:hover{opacity: 1; background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.7);}
+.symbolBox>ol>li>img{display: block; width: 100%; max-width: 35px; height: 100%;}
+.symbolBox>ol>li:hover .tooltip-txt{display: block;}
+.symbolBox>ol>li .tooltip-txt{display: none; z-index: 5; position: absolute; left: 0; margin-left: -20%; top: 120%; width: max-content; padding: 5px 10px; line-height: 20px; background-color: rgba(31, 41, 51, 0.9);}
+/*----------------
+    line
+----------------*/
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-line-tab .style-wrap h3 i{left: 0;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-line-tab .style-wrap>ul{height: 210px;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-line-tab .style-wrap>ul>li{align-items: center;}
+/*----------------
+    polygon - 토지이용도 72종 범례 리스트 추가 2024-07-22
+----------------*/
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-polyg-tab .style-wrap{height: 260px;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-polyg-tab .style-wrap>ul{margin-bottom: 20px;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-polyg-tab .style-wrap li{align-items: center;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-polyg-tab .landuse-Lgd-tit{display: flex; justify-content: space-between;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-polyg-tab .landuse-Lgd-tit input[type='text']{width: calc(100% - 250px); border: none; color: var(--c-y1); border-radius: 5px; background-color: var(--c-gr10); padding: 0 10px; text-align: right;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-polyg-tab .table-wrap{width: 100%; position: relative; height: 250px; overflow-y: auto;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-polyg-tab .table-wrap table{width: 100%;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-polyg-tab .table-wrap table thead tr th{position: sticky; top: 0; left: 0; background-color: var(--c-gr10);}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-polyg-tab .table-wrap table tr:not(:last-of-type){border-bottom: 1px solid var(--c-gr7);}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-polyg-tab .table-wrap table th,
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-polyg-tab .table-wrap table td{vertical-align: middle; padding: 10px; font-size: 10px; font-weight: 600;}
+.style-edit .popup-wrap .tab-container .tab-detail-Box .sty-polyg-tab .table-wrap table td img{
+    display: block; width: 100%; max-width: 65px; height: 100%; max-height: 35px;
+}
+/* button-area */
+.style-edit .btn-wrap{width: 100%; height: 35px;}
+.style-edit .btn-wrap button{display: block; width: 125px; transition: all 0.3s ease-in-out; margin: 0 auto; padding: 0 10px; height: 25px; border-radius: 0; border: 1px solid var(--c-lnv); background-color: var(--c-lnv);}
+.style-edit .btn-wrap button:hover{background-color: rgba(255, 255, 255, 0.75); border-color: #fff;}
+
+
+/*=========================================
+    chart popup - 통계 내 차트팝업
+=========================================*/
+.Chart-Pop.active{display: block;}
+.Chart-Pop{
+    display: none; width: 32.5%; left: 390px; top: 70px; min-width: 610px; max-width: 620px; min-height: 320px; height: auto; padding: 15px;
+    background-color: #fff; z-index: 11;
+}
+/* 차트 아이콘 */
+.chart-Icon{width: 20px; height: 20px; background-image: url('../Images/chart-ico.svg'); position: absolute; top: 0;}
+.Chart-Pop .popup-wrap{height: calc(100% - 35px); width: 100%;}
+
+/*=========================================
+    Statistic List popup - 통계 내 서브 이너팝업
+=========================================*/
+.innerPop.Statistics-Sub{left: 100%; top: 0;}
+.innerPop.Statistics-Sub .popup-wrap{height: 100%; margin-bottom: 0;}
+.innerPop.Statistics-Sub .popup-wrap .table-container{height: calc(100% - 35px);}
+
+/*=========================================
+      업로드 팝업
+=========================================*/
+.Upload-Pop #shpUploadForm { background: #ffffff; padding: 20px; }
+.Upload-Pop .popup-wrap { min-height: 300px; display: flex; flex-direction: column; justify-content: center; }
+.Upload-Pop .upload-area { border: 2px dashed #cbd5e0; margin-bottom: 20px; padding: 30px; background: #f8fafc; display: flex; flex-direction: column; align-items: center; min-height: 180px; transition: all 0.3s ease; cursor: pointer; }
+.Upload-Pop .upload-area:hover, .upload-area.dragover { border-color: #4299e1; background: #ebf8ff; }
+.Upload-Pop .upload-area:hover .upload-icon svg { transform: scale(1.1); transition: transform 0.2s ease; }
+.Upload-Pop .upload-icon svg { color: #4299e1; width: 48px; height: 48px; margin-bottom: 15px; }
+.Upload-Pop .browse-btn:hover { color: #2b6cb0; text-decoration: none; }
+.Upload-Pop .file-preview { margin-bottom: 20px; position: relative; }
+.Upload-Pop .file-preview h4 { color: #2d3748; margin-bottom: 12px; padding: 0 0 10px 0; font-size: 14px; font-weight: 600; background: #ffffff; position: sticky; top: 0; z-index: 1; }
+.Upload-Pop .file-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; padding: 12px; display: flex; align-items: center; position: relative; animation: slideIn 0.3s ease; }
+.Upload-Pop .file-name { color: #2d3748; font-weight: 500; flex: 1; }
+.Upload-Pop .file-size { color: #718096; font-size: 12px; }
+.Upload-Pop .file-icon { width: 32px; height: 32px; margin-right: 12px; display: flex; align-items: center; justify-content: center; background: #ebf8ff; border-radius: 4px; color: #4299e1; }
+.Upload-Pop .remove-file { position: absolute; right: 12px; color: #a0aec0; cursor: pointer; font-size: 18px; transition: color 0.2s; }
+.Upload-Pop .remove-file:hover { color: #e53e3e; }
+.Upload-Pop .upload-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+.Upload-Pop .upload-btn, .clear-btn, .next-btn { padding: 8px 16px; font-size: 14px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s ease; }
+.Upload-Pop .upload-btn { background: #4299e1; color: white; }
+.Upload-Pop .upload-btn:hover { background: #3182ce; }
+.Upload-Pop .next-btn { background: #4299e1; color: white; }
+.Upload-Pop .next-btn:hover { background: #3182ce; }
+.Upload-Pop .upload-hint { color: #718096; font-size: 12px; margin-top: 12px; opacity: 0.8; line-height: 1.4; }
+.Upload-Pop .clear-btn { background: #edf2f7; color: #4a5568; }
+.Upload-Pop .clear-btn:hover { background: #e2e8f0; }
+.Upload-Pop .progress-wrapper { width: 100%; max-width: 400px; margin: 15px auto; background: #edf2f7; height: 8px; border-radius: 4px; overflow: hidden; }
+.Upload-Pop #progressBar { background: #4299e1; height: 100%; border-radius: 3px; transition: all 0.3s ease; }
+.Upload-Pop .progress-text { color: #4a5568; font-size: 14px; margin: 12px 0; text-align: center; }
+.Upload-Pop .step-container { display: none; }
+.Upload-Pop .step-container.active { display: block; animation: fadeIn 0.3s ease; }
+.Upload-Pop .progress-status { background: #ffffff; border-radius: 8px; text-align: center; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 20px; }
+.Upload-Pop .progress-status .status-text { font-size: 18px; color: #2d3748; margin-bottom: 25px; font-weight: 500; }
+.Upload-Pop .records-text { color: #2d3748; font-size: 16px; font-weight: 500; margin-top: 20px; }
+.Upload-Pop .status-text { display: flex; justify-content: center; align-items: center; gap: 4px; }
+.Upload-Pop .loading-text { display: inline-block; }
+.Upload-Pop .loading-text.INITIALIZING { color: #718096; /* 회색 */ }
+.Upload-Pop .loading-text.PARSING { color: #2B6CB0; /* 파란색 */ }
+.Upload-Pop .loading-text.PROCESSING { color: #4299e1; /* 밝은 파란색 */ } 
+.Upload-Pop .loading-text.COMPLETED { color: #48BB78; /* 초록색 */ } 
+.Upload-Pop .loading-text.ERROR { color: #E53E3E; /* 빨간색 */ }
+.Upload-Pop .loading-dots { display: inline-block; width: 24px; text-align: left; }
+.Upload-Pop .progress-status.uploading { animation: pulse 2s infinite ease-in-out; }
+.Upload-Pop .success-icon { font-size: 48px; color: #48BB78; margin-bottom: 20px; }
+.Upload-Pop .detail-text { color: #718096; margin: 10px 0; }
+.Upload-Pop .done-btn { background: #48BB78; color: white; padding: 8px 24px; border-radius: 6px; border: none; cursor: pointer; margin-top: 20px; transition: all 0.2s ease; }
+.Upload-Pop .done-btn:hover { background: #38A169; }
+.Upload-Pop .file-list { max-height: 200px; overflow-y: auto; padding-right: 4px; }
+.Upload-Pop .file-preview::-webkit-scrollbar { width: 6px; }
+.Upload-Pop .file-preview::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+.Upload-Pop .file-preview::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 3px; }
+.Upload-Pop .file-preview::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+.Upload-Pop .settings-form { padding: 20px; max-width: 500px; margin: 0 auto; }
+.Upload-Pop .setting-group { margin-bottom: 20px; }
+.Upload-Pop .setting-group label { display: block; margin-bottom: 8px; color: #2d3748; font-weight: 500; }
+.setting-group .note-text { display: none; font-size: 12px; color: #3B82F6; margin-top: 4px; font-style: italic; }
+.Upload-Pop .form-select { width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; background-color: white; font-size: 14px; appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: calc(100% - 12px) center; padding-right: 36px; }
+.Upload-Pop .form-select::-ms-expand { display: none; }
+.Upload-Pop .form-input { width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; }
+.Upload-Pop .radio-group { display: flex; flex-direction: column; }
+.Upload-Pop .radio-label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #4a5568; padding: 12px 12px; cursor: pointer; transition: background-color 0.2s; }
+.Upload-Pop .radio-label:hover { background-color: #f8fafc; }
+.Upload-Pop .radio-label { margin-bottom: 0 !important; }
+.Upload-Pop .back-btn { padding: 8px 16px; background: #edf2f7; color: #4a5568; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+.Upload-Pop .back-btn:hover { background: #e2e8f0; }
+.Upload-Pop .form-select:invalid, .form-input:invalid { border-color: #fc8181; }
+.Upload-Pop .form-select:valid, .form-input:valid { border-color: #48bb78; }
+/* Animations */
+@keyframes slideIn {from {opacity: 0; transform: translateY(-10px);} to {opacity: 1; transform: translateY(0);}}
+@keyframes pulse {0% {opacity: 0.8;} 50% {opacity: 1;} 100% {opacity: 0.8;}}
+@keyframes loadingDots {0% {content: "Uploading files";} 25% {content: "Uploading files.";} 50% {content: "Uploading files..";} 75% {content: "Uploading files...";}}
+@keyframes fadeIn {from {opacity: 0;} to {opacity: 1;}}

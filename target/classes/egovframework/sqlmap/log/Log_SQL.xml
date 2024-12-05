@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="LogTrackerDAO">
+	<insert id="insertLogTracker" parameterType="LogTrackerVO" keyProperty="log_id" useGeneratedKeys="true" keyColumn="log_id">
+		<![CDATA[
+			INSERT INTO
+				lumus."TBL_USER_LOG"
+				(
+					usr_no, grp_id, log_code, log_level, message, reg_date, ip
+				)
+				VALUES
+				(
+					#{usr_no}, #{grp_id}, #{log_code}, #{log_level}, #{message}, TO_CHAR(now(), 'YYYY-MM-DD HH24:MI:SS'), #{ip}
+				)
+		]]>
+	</insert>
+	
+	<select id="selectUsrLogList" parameterType="LogTrackerVO" resultType="LogTrackerVO">
+		<![CDATA[
+			SELECT message, ip, reg_date FROM lumus."TBL_USER_LOG" WHERE usr_no=#{usr_no} ORDER BY reg_date DESC
+		]]>
+	</select>
+</mapper>

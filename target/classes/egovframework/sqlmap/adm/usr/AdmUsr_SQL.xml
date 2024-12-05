@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="AdmUsrDAO">
+	<select id="selectUsrList" resultType="UsrVO">
+		<![CDATA[
+			SELECT * 
+			FROM lumus."TBL_USER" as u 
+			INNER JOIN lumus."TBL_USER_GROUP" as g
+			ON u.grp_id  = g.grp_id
+		]]>
+		<if test = 'search != null'>
+			<if test='type == "1"'>
+				WHERE usr_id ILIKE CONCAT('%', #{search}, '%')
+			</if>
+			<if test='type == "2"'>
+				WHERE usr_nm ILIKE CONCAT('%', #{search}, '%')
+			</if>			
+			<if test='type == "3"'>
+				WHERE u.grp_id = #{grp_search}
+			</if>
+		</if>
+		<![CDATA[
+			ORDER BY u.reg_date DESC
+		]]>
+	</select>
+	<select id="selectUsrCount"  parameterType="UsrVO" resultType="java.lang.Integer">
+		<![CDATA[
+			SELECT COUNT(*) AS TOTAL 
+			FROM lumus."TBL_USER"
+		]]>
+		<if test = 'search != null'>
+			<if test='type == "1"'>
+				WHERE usr_id ILIKE CONCAT('%', #{search}, '%')
+			</if>
+			<if test='type == "2"'>
+				WHERE usr_nm ILIKE CONCAT('%', #{search}, '%')
+			</if>			
+			<if test='type == "3"'>
+				WHERE grp_id = #{grp_search}
+			</if>
+		</if>
+	</select>
+	
+	<update id="updateAdmUsrInfo" parameterType="java.util.HashMap">
+		<![CDATA[
+			UPDATE
+				lumus."TBL_USER"
+			SET
+				eml = #{eml},
+				telno = #{telno},
+				grp_id = #{grpId},
+				inst = #{inst},
+				dept = #{dept},
+				mdfr= #{mdfr},
+				mod_date = TO_CHAR(now(), 'YYYY-MM-DD HH24:MI:SS')
+			WHERE
+				usr_no = #{usrNo}
+		 ]]>
+	</update>
+	
+</mapper>

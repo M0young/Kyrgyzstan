@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserDAO">
+    <!-- ID 중복 체크 -->
+    <select id="selectUserId" parameterType="String" resultType="java.lang.Integer">
+        SELECT count(*) FROM lumus."user" WHERE user_id = #{value}
+    </select>
+    
+    <!-- 이메일 중복 체크 -->
+    <select id="selectEmail" parameterType="String" resultType="java.lang.Integer">
+        SELECT count(*) FROM lumus."user" WHERE eml = #{value}
+    </select>
+    
+    <!-- 사용자 정보 조회 -->
+    <select id="selectUserInfo" parameterType="UserVO" resultType="UserVO">
+        SELECT u.user_no, u.user_id, u.user_nm, u.eml, u.pwd, 
+               u.inst, u.dept, u.telno, u.reg_dt, u.mdfcn_dt,
+               u.prvc_clct_agre_yn, u.tmpr_pwd_yn, u.lgn_cnt, u.last_lgn,
+               g.group_id, g.group_nm
+        FROM lumus."user" u
+        INNER JOIN lumus.user_group g ON u.group_id = g.group_id
+        WHERE u.user_id = #{user_id}
+    </select>
+    
+    <!-- 사용자 등록 -->
+    <insert id="insertUserInfo" parameterType="java.util.HashMap">
+        INSERT INTO lumus."user"
+        (
+            user_id, user_nm, eml, pwd, 
+            inst, dept, telno, reg_dt,
+            prvc_clct_agre_yn, group_id, lgn_cnt,
+            tmpr_pwd_yn
+        )
+        VALUES
+        (
+            #{userId}, #{userNm}, #{eml}, #{pwd},
+            #{inst}, #{dept}, #{telno}, CURRENT_TIMESTAMP,
+            #{infoAgr}, '0', '0',
+            'N'
+        )
+    </insert>
+    
+    <!-- 사용자 정보 수정 -->
+    <update id="updateUserInfo" parameterType="UserVO">
+        UPDATE lumus."user"
+        SET eml = #{eml},
+            pwd = #{pwd},
+            telno = #{telno},
+            inst = #{inst},
+            dept = #{dept},
+            mdfr = #{user_id},
+            mdfcn_dt = CURRENT_TIMESTAMP
+        WHERE user_no = #{user_no}
+    </update>
+
+    <!-- 로그인 체크 -->
+    <select id="checkLogin" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT 
+            user_no, user_id, user_nm, eml, pwd,
+            group_id, lgn_cnt, tmpr_pwd_yn
+        FROM lumus."user"
+        WHERE user_id = #{userId}
+        AND prvc_clct_agre_yn = 'Y'
+    </select>
+
+    <!-- 로그인 시도 횟수 업데이트 -->
+    <update id="updateLoginCount" parameterType="UserVO">
+        UPDATE lumus."user"
+        SET lgn_cnt = CAST(#{lgn_cnt} AS INTEGER) + 1,
+            last_lgn = CURRENT_TIMESTAMP
+        WHERE user_id = #{user_id}
+    </update>
+
+    <!-- 로그인 시도 횟수 초기화 -->
+    <update id="resetLoginCount" parameterType="UserVO">
+        UPDATE lumus."user"
+        SET lgn_cnt = 0,
+            last_lgn = CURRENT_TIMESTAMP
+        WHERE user_id = #{user_id}
+    </update>
+</mapper>

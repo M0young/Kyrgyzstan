@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="layerDAO">
+
+	<update id="createLandUseMapTable" parameterType="map">
+	    CREATE TABLE IF NOT EXISTS data.${mapType} (
+	        ink varchar(20),
+	        coate_raio varchar(50),
+	        name_raion varchar(50),
+	        coate_aa varchar(50),
+	        name_aa varchar(50),
+	        nomer_kont varchar(50),
+	        staryi_nom varchar(50),
+	        vid_ugodii varchar(50),
+	        uslcode char(20),
+	        ispolzovan char(1),
+	        opisanie varchar(200),
+	        primechani varchar(200),
+	        kategoria_ char(10),
+	        kolichestv varchar(50),
+	        lclsf_cd int,
+	        sclsf_cd int,
+	        cnt varchar(50),
+	        kdar varchar(50),
+	        geom public.geometry(Geometry, ${coord}),
+	        CONSTRAINT pk_${mapType} PRIMARY KEY (ink),
+	        CONSTRAINT fk_${mapType}_1 FOREIGN KEY (uslcode) REFERENCES lumus.land_type(type_cd),
+	        CONSTRAINT fk_${mapType}_2 FOREIGN KEY (kategoria_) REFERENCES lumus.land_fund(fund_cd)
+	    )
+	</update>
+
+	<insert id="insertDataByLandUseMap" parameterType="map">
+	    INSERT INTO data.${mapType}
+	    (
+	        "ink", "coate_raio", "name_raion", "coate_aa", "name_aa", 
+	        "nomer_kont", "staryi_nom", "vid_ugodii", "uslcode", "ispolzovan", 
+	        "opisanie", "primechani", "kategoria_", "kolichestv", "lclsf_cd", 
+	        "sclsf_cd", "cnt", "kdar", "geom"
+	    )
+	    VALUES 
+	    (
+	        #{layer.ink}, #{layer.coate_raio}, #{layer.name_raion}, #{layer.coate_aa}, #{layer.name_aa}, 
+	        #{layer.nomer_kont}, #{layer.staryi_nom}, #{layer.vid_ugodii}, #{layer.uslcode}, #{layer.ispolzovan}, 
+	        #{layer.opisanie}, #{layer.primechani}, #{layer.kategoria_}, #{layer.kolichestv}, #{layer.lclsf_cd}, 
+	        #{layer.sclsf_cd}, #{layer.cnt}, #{layer.kdar}, ST_GeomFromText(#{layer.geom}, #{coord})
+	    )
+	    ON CONFLICT ("ink") DO NOTHING
+	</insert>
+
+	<update id="copyTableToBackup" parameterType="map">
+	    CREATE TABLE backup.${backupTableName} AS 
+	    SELECT * FROM data.${mapType};
+	    ALTER TABLE backup.${backupTableName} ADD CONSTRAINT pk_${backupTableName} PRIMARY KEY (ink);
+	    ALTER TABLE backup.${backupTableName} ADD CONSTRAINT fk_${backupTableName}_1 FOREIGN KEY (uslcode) REFERENCES lumus.land_type(type_cd);
+	    ALTER TABLE backup.${backupTableName} ADD CONSTRAINT fk_${backupTableName}_2 FOREIGN KEY (kategoria_) REFERENCES lumus.land_fund(fund_cd);
+	</update>
+
+	<update id="moveTableToBackup" parameterType="map">
+	    ALTER TABLE data.${mapType} DROP CONSTRAINT pk_${mapType};
+	    ALTER TABLE data.${mapType} DROP CONSTRAINT fk_${mapType}_1;
+	    ALTER TABLE data.${mapType} DROP CONSTRAINT fk_${mapType}_2;
+	    ALTER TABLE data.${mapType} ADD CONSTRAINT pk_${backupTableName} PRIMARY KEY (ink);
+	    ALTER TABLE data.${mapType} ADD CONSTRAINT fk_${backupTableName}_1 FOREIGN KEY (uslcode) REFERENCES lumus.land_type(type_cd);
+	    ALTER TABLE data.${mapType} ADD CONSTRAINT fk_${backupTableName}_2 FOREIGN KEY (kategoria_) REFERENCES lumus.land_fund(fund_cd);
+	    ALTER TABLE data.${mapType} SET SCHEMA backup;
+	    ALTER TABLE backup.${mapType} RENAME TO ${backupTableName};
+	</update>
+
+	<select id="selectLandUseTypeCode" parameterType="LayerVO" resultType="LayerVO">
+		SELECT lclsf_cd, sclsf_cd FROM lumus.land_sclsf
+		WHERE fld_nm = #{fld_nm}
+	</select>
+
+	<select id="checkTableExists" parameterType="String" resultType="boolean">
+	   SELECT EXISTS (
+	       SELECT 1 
+	       FROM information_schema.tables 
+	       WHERE table_schema = 'data' 
+	       AND table_name = #{value}
+	   )
+	</select>
+
+	<select id="selectSridFromExistLayer" parameterType="String" resultType="Integer">
+	    SELECT CASE 
+	        WHEN EXISTS (SELECT 1 FROM data.${value} LIMIT 1)
+	        THEN (SELECT ST_SRID(geom) FROM data.${value} LIMIT 1)
+	        ELSE 0
+	    END AS srid
+	</select>
+</mapper>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_레이어_1" data-name="레이어 1" xmlns="http://www.w3.org/2000/svg" width="35" height="35" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 35 35">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4 {
+        stroke-width: 0px;
+      }
+
+      .cls-2 {
+        fill: url(#_무제_그라디언트_24);
+      }
+
+      .cls-2, .cls-4 {
+        fill-rule: evenodd;
+      }
+
+      .cls-3 {
+        fill: url(#_무제_그라디언트_27);
+      }
+
+      .cls-4 {
+        fill: #d9ff50;
+      }
+    </style>
+    <linearGradient id="_무제_그라디언트_24" data-name="무제 그라디언트 24" x1="17.5" y1="25.9" x2="17.5" y2="14.6" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#578816"/>
+      <stop offset="1" stop-color="#9ac729"/>
+    </linearGradient>
+    <linearGradient id="_무제_그라디언트_27" data-name="무제 그라디언트 27" x1="17.5" y1="18.5" x2="17.5" y2="10.8" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#60961c"/>
+      <stop offset="1" stop-color="#4f6e2a"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <path class="cls-2" d="M16.8,32.2l-8.8-13.1c-2.5-4.3-1.8-9.8,1.7-13.3h0c4.3-4.3,11.3-4.3,15.5,0h0c3.5,3.5,4.2,9,1.7,13.3l-8.8,13.1c-.3.5-1,.5-1.3,0ZM17.5,7.6c-3.5,0-6.3,2.8-6.3,6.3s2.8,6.3,6.3,6.3,6.3-2.8,6.3-6.3-2.8-6.3-6.3-6.3Z"/>
+    <circle class="cls-3" cx="17.5" cy="13.6" r="7.6"/>
+    <path class="cls-4" d="M25.1,13.5c0,4.2-3.4,7.2-7.6,7.2s-7.6-3.1-7.6-7.2c0,4.2,3.4,7.9,7.6,7.9s7.6-3.7,7.6-7.9Z"/>
+  </g>
+  <rect class="cls-1" width="35" height="35"/>
+</svg>
