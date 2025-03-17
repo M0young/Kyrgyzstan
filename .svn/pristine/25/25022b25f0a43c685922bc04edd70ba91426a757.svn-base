@@ -1,0 +1,329 @@
+// admin.js
+_GL.ADMIN = (function () {
+  'use strict';
+
+  let initialized = false;
+  let currentPage = 0; // 현재 페이지 번호
+  const pageSize = 2; // 페이지 크기
+
+  // Bootstrap Modal 인스턴스를 저장할 변수들 (수동 제어 방식)
+  let editModalInstance = null;
+  let deleteModalInstance = null;
+
+  /**
+   * DOM 요소 가져오기 (모달 관련 선택자를 수정)
+   * edit-modal의 id는 "edit-modal-report"이며, 입력 요소는 placeholder 또는 태그 선택자로 가져옴
+   */
+  function getElements() {
+    return {
+      userTableBody: document.querySelector('#user-table-body') || { innerHTML: '' },
+      userCount: document.querySelector('#user-count') || { textContent: '0' },
+      // edit-modal (id: edit-modal-report)
+      editModal: document.getElementById('edit-modal-report'),
+      // 입력 필드 (JSP에서 placeholder가 정확히 "Your name", "Your Organization", "Your Department"로 되어 있어야 함)
+      editUserName: document.querySelector('#edit-modal-report input[placeholder="Your name"]'),
+      editUserRole: document.querySelector('#edit-modal-report select'),
+      editUserOrg: document.querySelector('#edit-modal-report input[placeholder="Your Organization"]'),
+      editUserDept: document.querySelector('#edit-modal-report input[placeholder="Your Department"]'),
+      // 버튼들
+      cancelButton: document.getElementById('cancelEditUser'),
+      saveButton: document.getElementById('saveEditUser'),
+      deleteButton: document.getElementById('deleteEditUser'),
+      searchInput: document.getElementById('search-input'),
+      searchButton: document.getElementById('search-btn')
+    };
+  }
+
+  /**
+   * 사용자 데이터 가져오기 (페이지네이션 지원)
+   */
+  function fetchUserData(query = '', page = 0) {
+    const elements = getElements();
+    const trimmedQuery = query.trim();
+    elements.userTableBody.innerHTML = `<tr><td colspan="9" class="text-center">Loading...</td></tr>`;
+
+    console.log(`Fetching data with query: "${trimmedQuery}"`);
+    const url = `/klums/api/admin/user/list/paged?page=${page}&size=${pageSize}${
+      trimmedQuery ? `&query=${encodeURIComponent(trimmedQuery)}` : ''
+    }`;
+    console.log(`Request URL: ${url}`);
+
+    fetch(url)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        const result = data.data || {};
+        const users = result.users || [];
+        const totalUsers = result.total || 0;
+        const totalPages = Math.ceil(totalUsers / pageSize);
+
+        console.log('Fetched Users:', users);
+        elements.userTableBody.innerHTML = '';
+        elements.userCount.textContent = totalUsers || 0;
+
+        if (users.length === 0) {
+          elements.userTableBody.innerHTML = `<tr><td colspan="9" class="text-center">No results found.</td></tr>`;
+          return;
+        }
+
+        // edit 버튼에는 data-bs-toggle, data-bs-target 속성을 추가해두면
+        // 버튼 클릭 시 Bootstrap이 자동으로 모달을 띄우지만, 우리 경우 JS에서 데이터를 채워넣기 위해
+        // 클릭 이벤트에서 직접 modal 인스턴스를 생성하여 show()를 호출합니다.
+        users.forEach((user, index) => {
+          console.log(user);
+          const row = `
+            <tr>
+              <td>${index + 1 + page * pageSize}</td>
+              <td>${user.user_nm}</td>
+              <td>${user.eml}</td>
+              <td>${user.group_nm}</td>
+              <td>${user.inst}</td>
+              <td>${user.dept}</td>
+              <td>${user.reg_dt}</td>
+              <td>${user.last_lgn_dt}</td>
+              <td>
+                <button class="btn btn-sm btn-primary edit-button" data-id="${user.eml}">
+                  EDIT
+                </button>
+              </td>
+            </tr>`;
+          elements.userTableBody.insertAdjacentHTML('beforeend', row);
+        });
+
+        setupPagination(totalPages, page, elements);
+      })
+      .catch((error) => {
+        console.error('Error fetching user data:', error);
+        elements.userTableBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Failed to load data</td></tr>`;
+      });
+  }
+
+  /**
+   * 페이지네이션 이벤트 설정
+   */
+  function setupPagination(totalPages, currentPage, elements) {
+    const paginationContainer = document.querySelector('.pagination');
+    paginationContainer.innerHTML = ''; // 기존 페이지네이션 초기화
+
+    // Previous 버튼
+    const prevButton = document.createElement('li');
+    prevButton.className = `page-item ${currentPage === 0 ? 'disabled' : ''}`;
+    prevButton.innerHTML = `
+      <a class="page-link" href="#" tabindex="-1" aria-disabled="${currentPage === 0}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" 
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
+          <path d="M15 6l-6 6l6 6"></path>
+        </svg>
+        prev
+      </a>`;
+    prevButton.addEventListener('click', () => {
+      if (currentPage > 0) {
+        fetchUserData(elements.searchInput.value, currentPage - 1);
+      }
+    });
+    paginationContainer.appendChild(prevButton);
+
+    // 페이지 번호 생성
+    for (let i = 0; i < totalPages; i++) {
+      const pageItem = document.createElement('li');
+      pageItem.className = `page-item ${i === currentPage ? 'active' : ''}`;
+      pageItem.innerHTML = `<a class="page-link" href="#">${i + 1}</a>`;
+      pageItem.addEventListener('click', () => {
+        fetchUserData(elements.searchInput.value, i);
+      });
+      paginationContainer.appendChild(pageItem);
+    }
+
+    // Next 버튼
+    const nextButton = document.createElement('li');
+    nextButton.className = `page-item ${currentPage === totalPages - 1 ? 'disabled' : ''}`;
+    nextButton.innerHTML = `
+      <a class="page-link" href="#">
+        next
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" 
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
+          <path d="M9 6l6 6l-6 6"></path>
+        </svg>
+      </a>`;
+    nextButton.addEventListener('click', () => {
+      if (currentPage < totalPages - 1) {
+        fetchUserData(elements.searchInput.value, currentPage + 1);
+      }
+    });
+    paginationContainer.appendChild(nextButton);
+  }
+
+  /**
+   * Edit 버튼 클릭 이벤트 및 Save/DELETE 기능 추가
+   * Bootstrap Modal API를 사용하여 모달을 제어
+   */
+  function setupEditEvent() {
+    const elements = getElements();
+
+    // Edit 버튼 클릭 시, 해당 row의 데이터를 edit-modal-report에 채워넣고 모달을 표시
+    elements.userTableBody.addEventListener('click', function (e) {
+      if (e.target.classList.contains('edit-button')) {
+        const row = e.target.closest('tr');
+        const userData = {
+          user_nm: row.cells[1].textContent,
+          group_nm: row.cells[3].textContent,
+          inst: row.cells[4].textContent,
+          dept: row.cells[5].textContent,
+          email: e.target.getAttribute('data-id')
+        };
+
+        // 입력 필드 채우기 (JSP의 입력 필드와 placeholder가 일치해야 함)
+        elements.editUserName.value = userData.user_nm;
+        elements.editUserRole.value = userData.group_nm;
+        elements.editUserOrg.value = userData.inst;
+        elements.editUserDept.value = userData.dept;
+        // 사용자 email을 모달의 data 속성에 저장 (업데이트 및 삭제 시 사용)
+        elements.editModal.setAttribute('data-email', userData.email);
+
+        // Bootstrap Modal API로 edit-modal 표시 (모달은 JSP에서 기본적으로 감춰진 상태여야 함)
+        editModalInstance = new bootstrap.Modal(elements.editModal);
+        editModalInstance.show();
+      }
+    });
+
+    // SAVE 버튼 클릭 시, 수정된 데이터를 서버에 전송
+    elements.saveButton.addEventListener('click', function () {
+      const email = elements.editModal.getAttribute('data-email');
+      const updatedData = {
+        user_nm: elements.editUserName.value,
+        group_nm: elements.editUserRole.value,
+        inst: elements.editUserOrg.value,
+        dept: elements.editUserDept.value,
+        eml: email
+      };
+      console.log("Data being sent to server:", updatedData);
+
+      fetch('/klums/api/admin/user/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': _GL.csrf.token
+        },
+        body: JSON.stringify(updatedData)
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((result) => {
+          if (result.success) {
+            if (editModalInstance) editModalInstance.hide();
+            fetchUserData(); // 데이터 다시 로드
+          } else {
+            alert('Failed to update user.');
+          }
+        })
+        .catch((error) => {
+          console.error('Error updating user:', error);
+          alert('An error occurred while updating the user.');
+        });
+    });
+
+    // DELETE 버튼 클릭 시, edit-modal은 그대로 두고 delete-modal (id: modal-danger) 표시
+    elements.deleteButton.addEventListener('click', function () {
+      deleteModalInstance = new bootstrap.Modal(document.getElementById('modal-danger'));
+      deleteModalInstance.show();
+    });
+    
+    
+    // CANCEL 버튼 클릭 시 모달 닫기
+    elements.cancelButton.addEventListener('click', function () {
+        if (editModalInstance) {
+            editModalInstance.hide();
+        }
+    });
+  }
+  
+  /**
+   * delete-modal의 확인(삭제) 이벤트 설정
+   * delete-modal 내 "Delete" 버튼에 이벤트를 연결 (링크의 기본 동작 취소)
+   */
+  function setupDeleteModalEvent() {
+    const deleteConfirmButton = document.querySelector('#modal-danger .btn-danger');
+    if (deleteConfirmButton) {
+      deleteConfirmButton.addEventListener('click', function (e) {
+        e.preventDefault();
+        // edit-modal에 저장된 email 값을 가져옴
+        const email = document.getElementById('edit-modal-report').getAttribute('data-email');
+        fetch('/klums/api/admin/user/delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': _GL.csrf.token
+          },
+          body: JSON.stringify({ eml: email })
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((result) => {
+            if (result.success) {
+              if (deleteModalInstance) deleteModalInstance.hide();
+              if (editModalInstance) editModalInstance.hide();
+              fetchUserData();
+            } else {
+              alert('Failed to delete user.');
+            }
+          })
+          .catch((error) => {
+            console.error('Error deleting user:', error);
+            alert('An error occurred while deleting the user.');
+          });
+      });
+    }
+  }
+
+  /**
+   * 검색 이벤트 설정
+   */
+  function setupSearchEvent() {
+    const elements = getElements();
+
+    elements.searchButton.addEventListener('click', () => {
+      currentPage = 0; // 검색 시 페이지 초기화
+      fetchUserData(elements.searchInput.value, currentPage);
+    });
+
+    elements.searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        currentPage = 0; // 검색 시 페이지 초기화
+        fetchUserData(elements.searchInput.value, currentPage);
+      }
+    });
+  }
+
+  /**
+   * 초기화
+   */
+  function init() {
+    if (initialized) return;
+    fetchUserData();
+    setupEditEvent();
+    setupSearchEvent();
+    setupDeleteModalEvent(); 
+    initialized = true;
+  }
+
+  return {
+    init
+  };
+})();
+
+// DOM 로드 완료 시 초기화
+document.addEventListener('DOMContentLoaded', function () {
+  _GL.ADMIN.init();
+});

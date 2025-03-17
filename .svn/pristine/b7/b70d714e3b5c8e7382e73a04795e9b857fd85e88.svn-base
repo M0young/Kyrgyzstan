@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="authryDAO">
+    <!-- 그룹별 권한 목록 조회 -->
+    <select id="selectGroupAuthryList" parameterType="String" resultType="RoleCodeVO">
+        SELECT 
+            a.authry_cd,
+            a.authry_nm,
+            a.authry_desc,
+            ga.reg_dt,
+            ga.mdfcn_dt
+        FROM 
+            klums.authry a
+            INNER JOIN klums.group_authry ga ON a.authry_cd = ga.authry_cd
+        WHERE 
+            ga.group_no = #{group_no}
+    </select>
+
+    <!-- 권한 정보 조회 -->
+    <select id="selectAuthryInfo" parameterType="String" resultType="RoleCodeVO">
+        SELECT 
+            authry_cd,
+            authry_nm,
+            authry_desc,
+            reg_dt,
+            mdfcn_dt
+        FROM 
+            klums.authry
+        WHERE 
+            authry_cd = #{authry_cd}
+    </select>
+
+    <!-- 그룹에 권한 부여 -->
+    <insert id="insertGroupAuthry" parameterType="RoleVO">
+        INSERT INTO klums.group_authry (
+            group_no,
+            authry_cd,
+            reg_dt,
+            mdfcn_dt
+        ) VALUES (
+            #{group_no},
+            #{authry_cd},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+    
+	<!-- 그룹의 권한 수정 -->
+	<update id="updateGroupAuthry" parameterType="RoleVO">
+	    UPDATE klums.group_authry 
+	    SET mdfcn_dt = CURRENT_TIMESTAMP 
+	    WHERE group_no = #{group_no} AND authry_cd = #{authry_cd}
+	</update>
+
+    <!-- 그룹의 권한 삭제 -->
+    <delete id="deleteGroupAuthry" parameterType="RoleVO">
+        DELETE FROM klums.group_authry
+        WHERE 
+            group_no = #{group_no}
+            AND authry_cd = #{authry_cd}
+    </delete>
+
+    <!-- 그룹의 모든 권한 삭제 -->
+    <delete id="deleteAllGroupAuthry" parameterType="String">
+        DELETE FROM klums.group_authry
+        WHERE group_no = #{group_no}
+    </delete>
+
+    <!-- 특정 권한 보유 여부 확인 -->
+    <select id="hasAuthry" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM klums.group_authry
+        WHERE 
+            group_no = #{group_no}
+            AND authry_cd = #{authry_cd}
+    </select>
+</mapper>

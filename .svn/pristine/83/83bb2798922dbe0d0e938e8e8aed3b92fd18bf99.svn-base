@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://www.mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mappingDAO">
+    
+    <!-- 전체 건수 조회 -->
+    <select id="countMapping" parameterType="MappingDTO" resultType="int">
+        SELECT COUNT(*)
+        FROM klums.land_lclsf
+    </select>
+
+    <!-- Classification List 조회 (페이징 적용) -->
+	<select id="selectClassificationList" parameterType="MappingDTO" resultType="MappingDTO">
+	    SELECT 
+	        lclsf_cd,
+	        CASE 
+	            WHEN #{lang} = 'ru' THEN lclsf_nm_ru
+	            WHEN #{lang} = 'ky' THEN lclsf_nm_ky
+	            ELSE lclsf_nm_en
+	        END AS lclsf_nm,
+	        rmrk
+	    FROM 
+	        klums.land_lclsf
+	    ORDER BY lclsf_cd ASC
+	    LIMIT #{size} OFFSET #{offset}
+	</select>
+
+    
+    <!-- Subclassification List 조회 (단순 조회, 페이징 없음) -->
+	<select id="selectSubClassificationList" parameterType="MappingDTO" resultType="MappingDTO">
+	    SELECT 
+	        lclsf_cd,
+	        sclsf_cd,
+	        CASE 
+	            WHEN #{lang} = 'ru' THEN sclsf_nm_ru
+	            WHEN #{lang} = 'ky' THEN sclsf_nm_ky
+	            ELSE sclsf_nm_en
+	        END AS sclsf_nm,
+	        rmrk
+	    FROM 
+	        klums.land_sclsf
+	    ORDER BY lclsf_cd ASC
+	</select>
+
+    
+    <!-- 대분류 코드 변경 -->
+	<update id="updateSubclassification" parameterType="MappingDTO">
+	    UPDATE klums.land_sclsf
+	    <set>
+	        <if test="lclsf_cd == null or lclsf_cd == ''">
+	            lclsf_cd = 0
+	        </if>
+	        <if test="lclsf_cd != null and lclsf_cd != ''">
+	            lclsf_cd = #{lclsf_cd}
+	        </if>
+	    </set>
+	    WHERE sclsf_cd = #{sclsf_cd}
+	</update>
+
+
+    
+    
+</mapper>

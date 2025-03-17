@@ -1,0 +1,294 @@
+package egovframework.main.map.upload.shapefile.service;
+
+import org.geotools.data.FileDataStore;
+import org.geotools.data.FileDataStoreFinder;
+import org.geotools.data.shapefile.ShapefileDataStore;
+import org.geotools.data.simple.SimpleFeatureCollection;
+import org.geotools.data.simple.SimpleFeatureSource;
+import org.geotools.data.FeatureReader;
+import org.locationtech.jts.geom.Geometry;
+import org.opengis.feature.simple.SimpleFeature;
+import org.opengis.feature.simple.SimpleFeatureType;
+import org.opengis.feature.type.GeometryDescriptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import egovframework.main.map.upload.progress.service.ProgressService;
+import egovframework.main.map.upload.shapefile.dto.ShapefileDTO;
+import egovframework.main.map.upload.progress.dto.ProgressDTO;
+
+import java.io.File;
+import java.nio.charset.Charset;
+import java.sql.SQLException;
+import java.util.*;
+
+import javax.annotation.Resource;
+
+@Service("shapefileProcessService")
+public class ShapefileProcessService {
+    private static final Logger logger = LoggerFactory.getLogger(ShapefileProcessService.class);
+    private static final int BATCH_SIZE = 100;
+    private static final int PROGRESS_UPDATE_INTERVAL = 1;
+    private static final String CHARSET_NAME = "UTF-8";
+    private static final String[] COUNT_FIELDS = {"priusadebn", "kollektivn", "kollekti_3"};
+    private static final String[] REQUIRED_FIELDS = {
+        "coate_raio", "name_raion", "coate_aa", "name_aa", "nomer_kont", "staryi_nom", 
+        "vid_ugodii", "uslcode", "ispolzovan", "opisanie", "primechani", "kategoria_", "kolichestv"
+    };
+
+    @Resource(name = "shapefileService")
+    private ShapefileService shapefileService;
+    
+    @Resource(name = "progressService")
+    private ProgressService progressService;
+
+    @Transactional(propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
+    public void processShapefile(File shpFile, String layerType, int coord, ProgressDTO progressDTO) throws Exception {
+        FileDataStore fds = null;
+        try {
+            // 1. Shapefile 데이터 스토어 초기화
+            fds = FileDataStoreFinder.getDataStore(shpFile);
+            ShapefileDataStore sds = (ShapefileDataStore) fds;
+            sds.setCharset(Charset.forName(CHARSET_NAME));
+            
+            // 2. 파싱 상태 업데이트 및 스키마 정보 로깅
+            progressService.handleProgressStatus(progressDTO, "PARSING", null);
+            SimpleFeatureSource featureSource = sds.getFeatureSource();
+            SimpleFeatureType schema = featureSource.getSchema();
+            logSchemaInfo(schema);
+            
+            // 3. 피처 컬렉션 가져오기
+            SimpleFeatureCollection features = featureSource.getFeatures();
+            
+            // 4. 배치 처리 시작
+            processFeaturesInBatch(sds, layerType, coord, features.size(), progressDTO);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to process shapefile: " + e.getMessage(), e);
+        } finally {
+            if (fds != null) {
+                fds.dispose();
+            }
+        }
+    }
+
+    private void processFeaturesInBatch(ShapefileDataStore sds, String layerType, int coord, int totalRecords, ProgressDTO progressDTO) throws Exception {
+        List<ShapefileDTO> batch = new ArrayList<>(BATCH_SIZE);
+        int processedCount = 0;
+        int batchCount = 0;
+        
+        progressService.handleProgressStatus(progressDTO, "PROCESSING", null);
+        
+        try (FeatureReader<SimpleFeatureType, SimpleFeature> reader = sds.getFeatureReader()) {
+            while (reader.hasNext()) {
+                SimpleFeature feature = reader.next();
+                try {
+	                ShapefileDTO shapefileDTO = convertFeatureToShapefileDTO(feature, coord);
+	                
+	                if (shapefileDTO != null) {
+	                    batch.add(shapefileDTO);
+	                    processedCount++;
+	                    
+	                    if (processedCount % PROGRESS_UPDATE_INTERVAL == 0) {
+	                        progressService.updateProgressCount(progressDTO, processedCount, totalRecords);
+	                    }
+	                    
+	                    if (batch.size() >= BATCH_SIZE || !reader.hasNext()) {
+	                        insertBatch(batch, layerType, coord);
+	                        batchCount++;
+	                        logger.info("Batch {}: Processed {} records out of {} (Current batch size: {})", 
+	                            batchCount, processedCount, totalRecords, batch.size());
+	                        batch.clear();
+	                    }
+	                }
+                } catch (Exception e) {
+                    throw new RuntimeException(e.getMessage());
+                }
+            }
+        }
+        logger.info("Processing completed - Total batches: {}, Total processed: {}", batchCount, processedCount);
+    }
+    
+    private ShapefileDTO convertFeatureToShapefileDTO(SimpleFeature feature, int coord) {
+        ShapefileDTO shapefileDTO = new ShapefileDTO();
+        try {
+            // 1. 필수 필드 처리
+            List<String> fieldList = new ArrayList<>(Arrays.asList(REQUIRED_FIELDS));
+            String inkField = (extractFeatureAttribute(feature, "ink") != null) ? "ink" : "ink_1";
+            fieldList.add(inkField);
+            
+            for (String field : fieldList) {
+                setShapefileField(shapefileDTO, field, extractFeatureAttribute(feature, field));
+            }
+
+            // 2. ink 필드 검증
+            if (shapefileDTO.getInk() == null) {
+                throw new IllegalStateException(
+                    String.format("Required field 'ink' is missing in record %s", 
+                        feature.getID().replaceAll("\\D+", ""))
+                );
+            }
+
+            // 3. 지오메트리 처리
+            processGeometry(feature, shapefileDTO, coord);
+
+            // 4. 토지 이용 필드 처리
+            processLandUseFields(feature, shapefileDTO);
+            
+            return shapefileDTO;
+        } catch (Exception e) {
+            logger.error("Error converting feature to VO: {}", e.getMessage());
+            throw new RuntimeException("Error processing record. Please check your data", e);
+        }
+    }
+    
+    private String extractFeatureAttribute(SimpleFeature feature, String fieldName) {
+        try {
+            Object value = feature.getAttribute(fieldName);
+            if (value != null) {
+                String strValue = value.toString().trim();
+                return strValue.isEmpty() ? null : strValue;
+            }
+        } catch (Exception e) {
+            logger.debug("Field {} not found or invalid", fieldName);
+        }
+        return null;
+    }
+
+    private void processGeometry(SimpleFeature feature, ShapefileDTO shapefileDTO, int coord) {
+        Geometry geometry = (Geometry) feature.getDefaultGeometry();
+        if (geometry != null) {
+            // SRID 검증
+            int geomSRID = geometry.getSRID();
+            if (geomSRID != 0 && geomSRID != coord) {
+                throw new IllegalStateException(
+                    String.format("Coordinate system mismatch. File uses EPSG:%d but selected EPSG:%d", 
+                        geomSRID, coord)
+                );
+            }
+
+            // 지오메트리 유효성 확인 및 설정
+            if (!geometry.isValid()) {
+                geometry = geometry.buffer(0);
+            }
+            geometry.setSRID(coord);
+            shapefileDTO.setGeom("SRID=" + coord + ";" + geometry.toText());
+        }
+    }
+
+    private void insertBatch(List<ShapefileDTO> batch, String layerType, int coord) throws Exception {
+        if (batch.isEmpty()) return;
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("layerType", layerType);
+        params.put("coord", coord);
+        
+        for (ShapefileDTO vo : batch) {
+            params.put("layer", vo);
+            shapefileService.insertShapefileData(params);
+        }
+    }
+
+    private void logSchemaInfo(SimpleFeatureType schema) {
+        if (schema == null) return;
+
+        try {
+            logger.info("=== Schema 정보 ===");
+            logger.info("Schema Name: " + 
+                (schema.getName() != null ? schema.getName().getLocalPart() : "unknown"));
+
+            // Geometry 정보 로깅
+            GeometryDescriptor geomDesc = schema.getGeometryDescriptor();
+            if (geomDesc != null) {
+                logger.info("Geometry Type: " + 
+                    geomDesc.getType().getBinding().getSimpleName());
+            }
+
+            // 속성 정보 로깅
+            schema.getAttributeDescriptors().forEach(attr -> {
+                if (attr != null) {
+                    logger.info(String.format("- 필드명: %-20s 타입: %-20s",
+                        attr.getLocalName(),
+                        attr.getType().getBinding().getSimpleName()));
+                }
+            });
+        } catch (Exception e) {
+            logger.error("Schema 정보 로깅 중 오류:", e.getMessage());
+        }
+    }
+
+    private void setShapefileField(ShapefileDTO shapefileDTO, String fieldName, String value) {
+        try {
+            switch(fieldName) {
+                case "ink": shapefileDTO.setInk(value); break;
+                case "ink_1": shapefileDTO.setInk(value); break;
+                case "coate_raio": shapefileDTO.setCoate_raio(value); break;
+                case "name_raion": shapefileDTO.setName_raion(value); break;
+                case "coate_aa": shapefileDTO.setCoate_aa(value); break;
+                case "name_aa": shapefileDTO.setName_aa(value); break;
+                case "nomer_kont": shapefileDTO.setNomer_kont(value); break;
+                case "staryi_nom": shapefileDTO.setStaryi_nom(value); break;
+                case "vid_ugodii": shapefileDTO.setVid_ugodii(value); break;
+                case "uslcode": 
+                    shapefileDTO.setUslcode(value != null ? Integer.parseInt(value.trim()) : null); 
+                    break;
+                case "ispolzovan": shapefileDTO.setIspolzovan(value); break;
+                case "opisanie": shapefileDTO.setOpisanie(value); break;
+                case "primechani": shapefileDTO.setPrimechani(value); break;
+                case "kategoria_": 
+                    double katValue = Double.parseDouble(value.trim());
+                    shapefileDTO.setKategoria_((int) katValue);
+                    break;
+                case "kolichestv": shapefileDTO.setKolichestv(value); break;
+            }
+        } catch (NumberFormatException e) {
+            logger.error("Failed to parse integer value for field {}: {}", fieldName, value, e);
+        }
+    }
+
+    private void processLandUseFields(SimpleFeature feature, ShapefileDTO shapefileDTO) throws SQLException {
+        String[] fieldNames = {
+            "pashni_v_1", "pashni_vtc", "bolota_vse", "pod_vodoi1", 
+            "pod_vodo_1", "pod_vodo_2", "pod_vodo_3", "pod_doroga", 
+            "pod_dvoram", "pod_postro", "narushen_1", "narushen_2", 
+            "zemel_naho", "zemel_na_1", "prochi_z_1", "prochi_z_2", 
+            "prochi_z_3", "prochi_z_4", "prochi_z_5", "prochi_z_6", 
+            "sh_vtch_or", "sh_vtch_bo", "sh_vtch_in", "mn_vtch_dr", 
+            "mn_vtch_pi", "mn_vtch_or", "mn_sadami_", "mn_vtch_sa", 
+            "mn_vtch_ya", "mn_vtch_vi", "mn_vtch_tu", "zalej_vtch", 
+            "zalej_vt_1", "senakosy_2", "senakosy_1", "pastbisha1", 
+            "pastbish_1", "pastbish_2", "pastbish_3", "pastbish_4", 
+            "pastbish_5", "pastbish_6", "pastbish_7", "pastbish_8", 
+            "pastbish_9", "pastbish_10", "pastbish_11", "priusadebn", 
+            "priusade_1", "priusade_2", "priusade_3", "priusade_4", 
+            "priusade_5", "priusade_6", "priusade_7", "priusade_8", 
+            "priusade_9", "priusad_10", "kollektivn", "kollekti_1", 
+            "kollekti_2", "kollekti_3", "kollekti_4", "kollekti_5", 
+            "lesnye_p_1", "lesnye_p_2", "lesnye_p_3", "lesnye_p_4", 
+            "drevesno_1", "drevesno_2", "drevesno_3", "drevesno_4", 
+            "drevesno_5"
+        };
+
+        for (String fieldName : fieldNames) {
+            String value = extractFeatureAttribute(feature, fieldName);
+            if (value != null && !"0".equals(value)) {
+            	shapefileDTO.setFld_nm(fieldName);
+                
+            	if (Arrays.asList(COUNT_FIELDS).contains(fieldName)) {
+            	    shapefileDTO.setCnt(value);
+            	} else {
+            	    shapefileDTO.setKdar(value);
+            	}
+                
+                ShapefileDTO resultVO = shapefileService.selectLandUseTypeCode(shapefileDTO);
+                if (resultVO != null) {
+                	shapefileDTO.setLclsf_cd(resultVO.getLclsf_cd());
+                	shapefileDTO.setSclsf_cd(resultVO.getSclsf_cd());
+                }
+                break;
+            }
+        }
+    }
+}

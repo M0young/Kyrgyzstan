@@ -1,0 +1,50 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!--
+  이 파일은 기존 edit modal의 기능(사용자 수정/삭제)을 유지하면서 레이아웃만 Tabler 스타일로 변경한 파일입니다.
+  기존 admin.js에서는 id="editUserModal", "uniqueEditUserName", "uniqueEditUserRole", "uniqueEditUserOrg", "uniqueEditUserDept",
+  "closeEditUserModal", "cancelEditUser", "saveEditUser", "deleteEditUser" 등의 요소를 참조하므로 그대로 사용합니다.
+-->
+<div class="modal modal-blur fade" id="editUserModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <!-- 모달 헤더 -->
+      <div class="modal-header">
+        <h5 class="modal-title">사용자 수정</h5>
+        <button type="button" class="btn-close" id="closeEditUserModal" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <!-- 모달 바디 -->
+      <div class="modal-body">
+        <!-- 사용자 기본 정보 섹션 -->
+        <div class="mb-3">
+          <label class="form-label">이름</label>
+          <input type="text" class="form-control" id="uniqueEditUserName" placeholder="이름을 입력하세요">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">역할</label>
+          <select class="form-select" id="uniqueEditUserRole">
+            <option value="Superuser">Superuser</option>
+            <option value="User">User</option>
+            <option value="Agency">Agency</option>
+            <option value="Member">Member</option>
+            <option value="Administrator">Administrator</option>
+          </select>
+        </div>
+        <!-- 조직 관련 정보 섹션 -->
+        <div class="mb-3">
+          <label class="form-label">조직</label>
+          <input type="text" class="form-control" id="uniqueEditUserOrg" placeholder="조직명을 입력하세요">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">부서</label>
+          <input type="text" class="form-control" id="uniqueEditUserDept" placeholder="부서를 입력하세요">
+        </div>
+      </div>
+      <!-- 모달 푸터 -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="saveEditUser">저장</button>
+        <button type="button" class="btn btn-secondary" id="cancelEditUser" data-bs-dismiss="modal">취소</button>
+        <button type="button" class="btn btn-outline-danger" id="deleteEditUser">삭제</button>
+      </div>
+    </div>
+  </div>
+</div>

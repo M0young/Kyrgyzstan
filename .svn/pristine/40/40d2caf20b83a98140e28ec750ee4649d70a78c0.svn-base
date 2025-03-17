@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+    <typeAliases>
+		<typeAlias alias="AuthDTO" type="egovframework.main.user.auth.dto.AuthDTO"/>
+		<typeAlias alias="AdminDTO" type="egovframework.main.admin.userManager.dto.AdminDTO"/>
+		<typeAlias alias="ActivityDTO" type="egovframework.main.user.activity.dto.ActivityDTO"/>
+		<typeAlias alias="RoleVO" type="egovframework.main.admin.role.service.RoleVO"/>
+		<typeAlias alias="RoleCodeVO" type="egovframework.main.admin.role.service.RoleCodeVO"/>
+		<typeAlias alias="LayerDTO" type="egovframework.main.map.layer.dto.LayerDTO"/>
+		<typeAlias alias="ProgressDTO" type="egovframework.main.map.upload.progress.dto.ProgressDTO"/>
+		<typeAlias alias="ShapefileDTO" type="egovframework.main.map.upload.shapefile.dto.ShapefileDTO"/>
+		<typeAlias alias="RegionVO" type="egovframework.main.map.region.service.RegionVO"/>
+    </typeAliases>
+    <plugins>
+        <plugin interceptor="egovframework.common.utils.SecureQueryFilter"/>
+    </plugins>
+</configuration>

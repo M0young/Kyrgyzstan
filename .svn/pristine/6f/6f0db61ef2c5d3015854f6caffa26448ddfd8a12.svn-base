@@ -1,0 +1,378 @@
+@charset "UTF-8";
+
+/* =====================================================
+    sidebar - main
+======================================================*/
+.navbar-vertical {
+  width: 20rem !important;;
+  min-height: 100vh;
+  transition: transform 0.3s ease;
+  position: fixed;
+  left: 0;
+  height: calc(100vh - 56px);
+  overflow-y: auto;
+  margin-top: 56px;
+  z-index: 1000;
+}
+
+/* 메인 컨텐츠 */
+.page-wrapper {
+    margin-left: 20rem; 
+    padding-top: 56px; 
+    overflow-x: hidden; 
+    overflow-y: auto; 
+}
+
+.navbar-vertical.collapsed + .page-wrapper {
+    margin-left: 0;
+    transition: margin-left 0.3s ease;
+}
+
+/* 헤더 고정 */
+header.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1050;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 음영 효과 추가 */
+}
+
+
+.navbar-vertical.collapsed {
+  transform: translateX(-100%);
+}
+
+.container-fluid {
+	align-items: stretch !important;
+}
+
+
+
+.role-authority-card {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: #ffffff;
+    margin-bottom: 20px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.role-authority-card .card-header {
+    background-color: #f6f8fb;
+    border-bottom: 1px solid #dee2e6;
+    padding: 10px 15px;
+    font-weight: bold;
+    font-size: 16px;
+    text-align: center;
+}
+
+.role-section {
+    padding-top: 15px;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-bottom: 0px;
+}
+
+.role-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #343a40;
+    text-align: left; /* 왼쪽 정렬 */
+}
+
+.role-group {
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: #f6f8fb;
+    text-align: left; /* 왼쪽 정렬 */
+}
+
+.role-group-admin{
+    padding: 10px 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: #f6f8fb;
+    text-align: left; /* 왼쪽 정렬 */
+}
+
+.role-subtitle {
+    font-size: 14px;
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 10px;
+}
+
+.role-checkbox-container {
+    display: flex;
+    flex-direction: column; /* 체크박스 아래로 나열 */
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.role-checkbox {
+    margin-bottom: 5px;
+}
+
+.card-footer {
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    background-color: #ffffff;
+    height: 50px;
+    padding: 33px;
+    border: 1px;
+}
+
+
+
+.card-footer .save-btn {
+    width: 80px;
+    display: flex;
+    padding: 10px 15px;
+    font-size: 14px;
+    font-weight: bold;
+    border: 1px solid #007bff;
+    background-color: #ffffff;
+    color: #007bff;
+    border-radius: 4px;
+    cursor: pointer;
+    justify-content: center;
+    align-items: center;
+    
+}
+
+.card-footer .save-btn:hover {
+    background-color: #007bff;
+    color: #ffffff;
+}
+
+
+
+.role-list-card {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: #ffffff;
+    margin-bottom: 20px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.role-list-card .card-header {
+    background-color: #f6f8fb;
+    border-bottom: 1px solid #dee2e6;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.role-list-card .create-btn {
+    font-size: 14px;
+    font-weight: bold;
+    padding: 5px 10px;
+    background-color: #007bff;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.role-list-card .create-btn:hover {
+    background-color: #0056b3;
+}
+
+.role-list-card .card-body {
+    padding-top: 15px;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-bottom: 0px;
+    
+}
+
+.role-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 4px;
+}
+
+.role-list-table th, .role-list-table td {
+    border: 1px solid #dee2e6;
+    padding: 10px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.role-list-table th {
+    background-color: #f6f8fb;
+    font-weight: bold;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center; /* 가운데 정렬 */
+    align-items: center; /* 세로 정렬 */
+    gap: 8px; /* 버튼 간 간격 */
+    margin-top: 10px; /* 위로 여백 */
+    padding: 0;
+    list-style: none; /* 기본 리스트 스타일 제거 */
+}
+.pagination .page-link svg {
+    width: 20px; /* 아이콘 크기 */
+    height: 18px; /* 아이콘 크기 */
+    margin: 0; /* 아이콘 주변 여백 제거 */
+}
+
+/* =====================================================
+    EDIT modal - admin
+======================================================*/
+/* 모달 배경 */
+.modal.fade {
+    display: none; 
+    position: fixed;
+    z-index: 1050;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    justify-content: center;
+    align-items: center; 
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* 모달 애니메이션 */
+.modal.show {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+    margin: 0;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* 모달 다이얼로그 */
+.modal-dialog {
+    position: fixed !important;
+    top: 50% !important; 
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important; 
+    width: 500px;
+    z-index: 1050;
+    height: auto;
+}
+
+/* 모달 컨텐츠 */
+.modal-content {
+    background: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    padding: 0;
+    animation: slideDown 0.3s ease-in-out;
+    height: auto;
+}
+    
+
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-20px);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+
+/* 모달 헤더 */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ddd;
+    margin: 0;
+}
+
+/* 닫기 버튼 */
+.btn-close {
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+}
+
+
+/* SAVE 버튼 */
+.modal-footer .btn-secondary {
+    background-color: #f8f9fa; 
+    color: #000; 
+    border: 1px solid #b8b8b8; 
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.1); 
+    transition: all 0.3s ease-in-out;
+    position: absolute; 
+    left: 31px; 
+    height: 33px;
+
+}
+
+/* SAVE 버튼 호버 */
+.modal-footer .btn-secondary:hover {
+    background-color: #e2e6ea; 
+    color: #000;
+    border-color: #a0a0a0; 
+}
+
+/* DELETE 버튼 */
+.modal-footer .btn-primary {
+    background-color: transparent; 
+    color: #dc3545; 
+    border: 1px solid #dc3545; 
+    transition: all 0.3s ease-in-out;
+    position: absolute; 
+    right: 31px; 
+    height: 33px;
+}
+
+/* DELETE 버튼 호버 */
+.modal-footer .btn-primary:hover {
+    background-color: #dc3545; 
+    color: #fff; 
+}
+
+.modal-footer {
+    background-color: #e2e6ea; 
+    border-top: thin; 
+    padding: 29px 10px;  
+}
+
+
+/* Page Title 스타일 */
+.page-title {
+    font-size: 25px; /* 글자 크기 조정 */
+    font-weight: 700; /* 더 두껍게 */
+    color: var(--tblr-body-color);
+    text-align: left; /* 왼쪽 정렬 */
+    text-transform: uppercase; /* 모든 글자를 대문자로 */
+    position: relative; /* 아이콘 위치를 위해 상대 위치 */
+    display: inline-flex; /* 아이콘과 함께 사용 */
+    align-items: center; /* 아이콘과 텍스트 수직 정렬 */
+}
+
+/* 아이콘 추가 (선택 사항)➤➡️▶︎ */
+.page-title::before {
+    content: "▶︎"; /* 원하는 아이콘 (이모지 또는 FontAwesome) */
+    margin-right: 10px; /* 텍스트와 간격 */
+    font-size: 20px; /* 아이콘 크기 */
+    /*color: #007bff; 아이콘 색상 */
+}
+

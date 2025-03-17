@@ -1,0 +1,25 @@
+#dev
+
+#postgresql
+Globals.postgresql.DriverClassName=org.postgresql.Driver
+Globals.postgresql.url=jdbc:postgresql://49.247.24.120:5432/klums_db
+Globals.postgresql.username=postgres
+Globals.postgresql.password=digitaltwin
+
+#GeoServer
+Globals.geoserver.url=https://vndan-geo.egiscloud.com
+Globals.geoserver.authorization=admin:geoserver
+Globals.geoserver.data.path=/opt/server/geo_tomcat/webapps/geoserver/data/klums/
+Globals.geoserver.workspace=klums
+Globals.geoserver.store=klums
+Globals.geoserver.schema=data
+#\uc2ec\ubcfc\uc774\ubbf8\uc9c0 \uacbd\ub85c
+#/opt/server/geo_tomcat/webapps/geoserver/data/klums/styles/symbols
+
+#mail
+Globals.mail.host=smtp.gmail.com
+Globals.mail.port=587
+Globals.mail.username=tebu984@gmail.com
+Globals.mail.password=bxudmmsbxunpwyqk
+Globals.mail.smtp.auth=true
+Globals.mail.smtp.starttls.enable=true

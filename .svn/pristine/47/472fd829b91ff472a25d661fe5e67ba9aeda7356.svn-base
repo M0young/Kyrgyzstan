@@ -1,0 +1,29 @@
+package egovframework.main.map.region.service.impl;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import egovframework.rte.fdl.cmmn.EgovAbstractServiceImpl;
+import egovframework.main.map.region.service.RegionService;
+import egovframework.main.map.region.service.RegionVO;
+
+@Service("regionService")
+public class RegionServiceImpl extends EgovAbstractServiceImpl implements RegionService {
+
+	@Resource(name="regionDAO")
+	private RegionDAO regionDAO;
+
+	@Override
+	public List<?> selectRegionList(RegionVO regionVO) {
+		return regionDAO.selectRegionList(regionVO);
+	}
+
+	@Override
+	public int selectRegionListCount(RegionVO regionVO) {
+		return regionDAO.selectRegionListCount(regionVO);
+	}
+	
+}

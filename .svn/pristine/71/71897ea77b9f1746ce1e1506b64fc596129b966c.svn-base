@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="progressDAO">
+	<!-- 진행률 생성 -->
+    <insert id="insertProgress" parameterType="ProgressDTO">
+        INSERT INTO klums.uld_prgrs 
+        (
+            prgrs_id,
+            prgrs,
+            tnocs_rcd,
+            cmptn_rcd,
+            cmptn_yn,
+            err_msg,
+            strt_dt,
+            cmptn_dt,
+            stts
+        )
+        VALUES 
+        (
+            #{prgrs_id},
+            #{prgrs},
+            #{tnocs_rcd},
+            #{cmptn_rcd},
+            #{cmptn_yn},
+            #{err_msg},
+            current_timestamp,
+            current_timestamp,
+            #{stts}
+        )
+    </insert>
+
+	<!-- 진행률 업데이트 -->
+    <update id="updateProgress" parameterType="ProgressDTO">
+        UPDATE klums.uld_prgrs
+        SET 
+            prgrs = #{prgrs},
+            cmptn_rcd = #{cmptn_rcd},
+            cmptn_yn = #{cmptn_yn},
+            err_msg = #{err_msg},
+            cmptn_dt = current_timestamp,
+            stts = #{stts},
+        <if test="tnocs_rcd != null">
+            tnocs_rcd = #{tnocs_rcd}
+        </if>
+        WHERE prgrs_id = #{prgrs_id}
+    </update>
+
+	<!-- 진행률 조회 -->
+	<select id="selectProgress" parameterType="string" resultType="ProgressDTO">
+        select 
+            prgrs_id,
+            prgrs,
+            tnocs_rcd,
+            cmptn_rcd,
+            cmptn_yn,
+            stts
+        from klums.uld_prgrs
+        where prgrs_id = #{prgrs_id}
+    </select>
+    
+	<!-- 오래된 데이터 삭제 -->
+    <delete id="deleteOldProgress">
+        <![CDATA[
+	        DELETE FROM klums.uld_prgrs
+    		WHERE reg_dt < (CURRENT_TIMESTAMP - INTERVAL '7 days')
+        ]]>
+    </delete>
+</mapper>

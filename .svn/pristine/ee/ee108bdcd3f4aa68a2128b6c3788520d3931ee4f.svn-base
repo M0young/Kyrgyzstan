@@ -1,0 +1,1737 @@
+/*========================================================
+    DATE: 2024. 02
+    AUTHOR: MOYOUNG
+    DESC: Map Edit Module
+========================================================*/
+_GL.MAP_EDIT = (function() {
+    'use strict';
+
+    let initialized = false;
+
+    // 모듈 상태 관리
+    let instance = null;
+    let editMode = null;
+
+    // OpenLayers 객체
+    let editSource = null;
+    let editLayer = null;
+    let drawInteraction = null;
+    let modifyInteraction = null;
+    let selectInteraction = null;
+
+    // 임시 피처 저장
+    const tempFeatures = [];
+    // 편집 모드 또는 피처 히스토리 관련 변수
+    let tempIdCounter = 1;
+    let editingFeatures = false;
+    
+    // 이벤트 리스너와 히스토리 관리
+    const eventListeners = { draw: null, select: null, modify: null };
+    const history = {
+        changes: [],  // 변경사항 기록
+        position: -1  // 현재 위치
+    };
+    
+    // 속성 테이블 상태 관리
+    const attributeTable = {
+	    popup: null,              // 팝업 요소 참조
+	    currentFeature: null,     // 현재 선택된 피처
+	    currentPage: 1,           // 현재 페이지 (페이지네이션)
+	    pageSize: 10,             // 페이지당 표시할 피처 수
+	    isFullTableMode: false,   // 전체 테이블/단일 피처 모드
+	    columnOrder: null,        // 컬럼 순서 저장
+	    mapMoveEndListener: null, // 맵 이동 이벤트 리스너
+	    refreshTimeout: null,     // 리프레시 타임아웃 핸들
+	    searchTerm: '',           // 검색어
+	    filteredFeatures: []      // 검색 결과 피처 목록
+	};
+
+    /**
+     * DOM 요소 가져오기
+     */
+    function getElements() {
+        return {
+            startBtn: document.getElementById('editStartBtn'),
+            stopBtn: document.getElementById('editStopBtn'),
+            undoBtn: document.getElementById('editUndoBtn'),
+            redoBtn: document.getElementById('editRedoBtn'),
+            editMode: document.querySelectorAll('input[name="editMode"]'),
+            drawModeBtn: document.getElementById('drawModeBtn'),
+            modifyModeBtn: document.getElementById('modifyModeBtn'),
+            deleteModeBtn: document.getElementById('deleteModeBtn'),
+            saveBtn: document.getElementById('editSaveBtn'),
+            discardBtn: document.getElementById('editDiscardBtn'),
+            popup: document.getElementById('mapPopupEdit')
+        };
+    }
+    
+    /**
+     * UI 상태 초기화
+     */
+    function initializeUIState() {
+        const elements = getElements();
+        
+        // 나머지 모든 컨트롤 비활성화
+        elements.stopBtn.disabled = true;
+        elements.undoBtn.disabled = true;
+        elements.redoBtn.disabled = true;
+        elements.drawModeBtn.disabled = true;
+        elements.modifyModeBtn.disabled = true;
+        elements.deleteModeBtn.disabled = true;
+        elements.saveBtn.disabled = true;
+        elements.discardBtn.disabled = true;
+        elements.editMode.forEach(radio => {
+            radio.checked = false;
+        });
+    }
+    
+    /**
+     * 편집 레이어 초기화
+     */
+    function initializeEditLayer() {
+        editSource = new ol.source.Vector();
+        editLayer = new ol.layer.Vector({
+            source: editSource,
+            style: new ol.style.Style({
+                fill: new ol.style.Fill({
+                    color: 'rgba(255, 255, 255, 0.4)'
+                }),
+                stroke: new ol.style.Stroke({
+                    color: '#ffcc33',
+                    width: 2
+                }),
+                image: new ol.style.Circle({
+                    radius: 7,
+                    fill: new ol.style.Fill({
+                        color: '#ffcc33'
+                    })
+                })
+            }),
+            id: 'editLayer',
+            zIndex: 1100
+        });
+        instance.addLayer(editLayer);
+    }
+
+    /**
+     * 편집 도구 초기화
+     */
+    function initializeInteractions() {
+        removeInteractions();
+
+        // Draw
+        drawInteraction = new ol.interaction.Draw({
+            source: editSource,
+            type: 'MultiPolygon',
+            geometryName: 'geom'
+        });
+        eventListeners.draw = event => {
+        	if (!event.feature.getId()) {
+                const newId = 'temp_' + (tempIdCounter++);
+                event.feature.setId(newId);
+            }
+            
+            // NOT NULL 제약조건이 있는 필드에만 기본값 설정
+            const requiredFields = {
+                'uslcode': 0,
+                'kategoria_': 0,
+                'lclsf_cd': 0,
+                'sclsf_cd': 0
+            };
+            
+            // 필수 필드에만 기본값 설정
+            for (const [key, value] of Object.entries(requiredFields)) {
+                event.feature.set(key, value);
+            }
+            
+            // 임시 피처 배열에 복제하여 추가
+            const clonedFeature = event.feature.clone();
+            tempFeatures.push(clonedFeature);
+            
+            addToHistory('insert', event.feature);
+            
+            showAttributeEditor(event.feature);
+        };
+        drawInteraction.on('drawend', eventListeners.draw);
+
+        // Select
+        selectInteraction = new ol.interaction.Select({
+            layers: [editLayer],
+            style: new ol.style.Style({
+                fill: new ol.style.Fill({
+                    color: 'rgba(33, 150, 243, 0.4)'
+                }),
+                stroke: new ol.style.Stroke({
+                    color: '#2196F3',
+                    width: 3,
+                }),
+                zIndex: 100
+            })
+        });
+        eventListeners.select = (event) => {
+            if (event.selected.length > 0) {
+                const selectedFeature = event.selected[0];
+                const selectedId = selectedFeature.getId();
+                
+                syncSelectedFeature();
+                
+                // 속성 테이블이 열려있다면 해당 행에 선택 상태 표시
+                if (attributeTable.popup && attributeTable.popup.style.display === 'block' && attributeTable.isFullTableMode) {
+                    highlightFeatureInTable(selectedId);
+                }
+                
+                if (editMode === 'delete') {
+                    _GL.COMMON.showAlertModal({
+                        title: '피처 삭제',
+                        message: '선택한 피처를 삭제하시겠습니까?',
+                        type: 'error',
+                        btn1: {
+                            text: 'Delete',
+                            callback: function() {
+                                const clonedFeature = selectedFeature.clone();
+                                clonedFeature.setId(selectedFeature.getId());
+                                clonedFeature.setStyle(editLayer.getStyle());
+                                addToHistory('delete', clonedFeature);
+                                editSource.removeFeature(selectedFeature);
+                                updateUIState();
+                            }
+                        },
+                        btn2: {}
+                    });
+                } else {
+                    // 전체 테이블 모드에서는 단일 피처 편집으로 전환하지 않고 피처 선택만 유지
+                    if (attributeTable.popup && 
+                        attributeTable.popup.style.display === 'block' && 
+                        attributeTable.isFullTableMode) {
+                        attributeTable.currentFeature = selectedFeature; // 현재 피처 업데이트
+                        // 단일 피처 편집으로는 전환하지 않음 (updateAttributeEditor 호출하지 않음)
+                    } else {
+                        // 속성 테이블이 닫혀있거나 이미 단일 피처 모드라면 에디터 표시
+                        showAttributeEditor(selectedFeature);
+                    }
+                }
+            }
+        };
+        selectInteraction.on('select', eventListeners.select);
+
+        // Modify
+        const originalGeometries = {};
+        modifyInteraction = new ol.interaction.Modify({
+            features: selectInteraction.getFeatures(),
+            pixelTolerance: 10,
+            geometryName: 'geom'
+        });
+        modifyInteraction.on('modifystart', event => {
+            event.features.forEach(feature => {
+                const id = feature.getId() || 'temp_' + Date.now();
+                if (!feature.getId()) {
+                    feature.setId(id);
+                }
+                // 수정 시작 시 원본 형상 저장
+                originalGeometries[id] = feature.getGeometry().clone();
+            });
+        });
+        eventListeners.modify = event => {
+            event.features.forEach(feature => {
+                const id = feature.getId();
+                if (id && originalGeometries[id]) {
+                    addToHistory('update', feature, originalGeometries[id]);
+                    delete originalGeometries[id];
+                } else {
+                    addToHistory('update', feature, feature.getGeometry().clone());
+                }
+            });
+        };
+        modifyInteraction.on('modifyend', eventListeners.modify);
+        
+        // 도구 추가 및 비활성화
+        [drawInteraction, selectInteraction, modifyInteraction].forEach(interaction => {
+            instance.addInteraction(interaction);
+            interaction.setActive(false);
+        });
+    }
+
+    /**
+     * 편집 도구 제거
+     */
+    function removeInteractions() {
+        if (drawInteraction) {
+            if (eventListeners.draw) {
+                drawInteraction.un('drawend', eventListeners.draw);
+            }
+            instance.removeInteraction(drawInteraction);
+            drawInteraction = null;
+        }
+        
+        if (selectInteraction) {
+            if (eventListeners.select) {
+                selectInteraction.un('select', eventListeners.select);
+            }
+            instance.removeInteraction(selectInteraction);
+            selectInteraction = null;
+        }
+        
+        if (modifyInteraction) {
+            if (eventListeners.modify) {
+                modifyInteraction.un('modifyend', eventListeners.modify);
+            }
+            instance.removeInteraction(modifyInteraction);
+            modifyInteraction = null;
+        }
+    }
+    
+/* =====================================================
+    Edit Main
+======================================================*/
+    /**
+     * WFS 요청으로 피처 로드
+     */
+    function loadLayerFeatures() {
+        instance.getTargetElement().classList.add('spinner');
+        
+        // 편집 중인 경우에는 피처를 다시 로드하지 않음
+        if (editingFeatures && history.position >= 0) {
+            instance.getTargetElement().classList.remove('spinner');
+            return Promise.resolve(editSource.getFeatures().length);
+        }
+        
+        // 현재 임시 피처들 저장 (temp_ ID로 시작하는 피처들)
+        const currentTempFeatures = editSource.getFeatures()
+            .filter(f => {
+                const id = f.getId();
+                return id && id.toString().startsWith('temp_');
+            })
+            .map(f => f.clone());
+        
+        // 기존 임시 피처들 합치기
+        if (currentTempFeatures.length > 0) {
+            tempFeatures.splice(0, tempFeatures.length, ...currentTempFeatures);
+        }
+        
+        // 현재 맵 뷰 영역 가져오기
+        const extent = instance.getView().calculateExtent(instance.getSize());
+        const transformedExtent = ol.proj.transformExtent(extent, 'EPSG:3857', 'EPSG:4326');
+        
+        const wfsUrl = new URL(window.location.origin + _GL.MAP_CONFIG.URLS.WFS);
+        wfsUrl.searchParams.append('service', 'WFS');
+        wfsUrl.searchParams.append('version', '1.1.0');
+        wfsUrl.searchParams.append('request', 'GetFeature');
+        wfsUrl.searchParams.append('typeName', 'klums:land_use');
+        wfsUrl.searchParams.append('outputFormat', 'application/json');
+        wfsUrl.searchParams.append('srsName', 'EPSG:3857');
+        wfsUrl.searchParams.append('bbox', transformedExtent.join(',') + ',EPSG:4326');
+        wfsUrl.searchParams.append('maxFeatures', '1000');
+
+        return fetch(wfsUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data.features) {
+                    throw new Error('No features in response');
+                }
+
+                const features = new ol.format.GeoJSON().readFeatures(data, {
+                    featureProjection: 'EPSG:3857'
+                });
+
+                // 서버 피처만 다시 로드하고 임시 피처는 유지
+                // 현재 임시 피처들 확인
+                const tempFeatureIds = tempFeatures.map(f => f.getId());
+                
+                // 소스에서 임시 피처만 제외하고 비우기
+                const tempFeaturesInSource = editSource.getFeatures()
+                    .filter(f => {
+                        const id = f.getId();
+                        return id && id.toString().startsWith('temp_');
+                    });
+                
+                editSource.clear();
+                
+                // 서버에서 받아온 피처 추가
+                features.forEach(feature => {
+                    // 현재 임시 피처와 ID가 충돌하지 않는 경우만 추가
+                    const featureId = feature.getId();
+                    if (!featureId || !tempFeatureIds.includes(featureId)) {
+                        editSource.addFeature(feature);
+                    }
+                });
+                
+                // 기존 임시 피처들 다시 추가
+                tempFeaturesInSource.forEach(feature => {
+                    editSource.addFeature(feature);
+                });
+                
+                editLayer.setVisible(true);
+                
+                // 사용자에게 현재 화면에 표시된 피처 수 알림
+                if (features.length === 1000) { // maxFeatures와 동일한 값
+                    _GL.COMMON.showToast('현재 화면에 표시할 수 있는 최대 피처 수만 로드되었습니다. 확대하면 더 상세하게 볼 수 있습니다.', 'info');
+                } else {
+                    _GL.COMMON.showToast(`현재 화면에 ${features.length}개 피처가 로드되었습니다.`, 'info');
+                }
+                
+                return features.length;
+            })
+            .catch(error => {
+                _GL.COMMON.showToast(`Failed to load features: ${error.message}`, 'error');
+                throw error;
+            })
+            .finally(() => {
+                instance.getTargetElement().classList.remove('spinner');
+            });
+    }
+    
+    /**
+     * 편집 모드 설정
+     */
+    function setEditMode(mode) {
+        // 모든 인터랙션 비활성화
+        [drawInteraction, selectInteraction, modifyInteraction].forEach(interaction => {
+            if (interaction) interaction.setActive(false);
+        });
+
+        editMode = mode;
+        
+        // 선택된 모드에 따라 필요한 인터랙션만 활성화
+        switch(mode) {
+            case 'draw':
+                drawInteraction.setActive(true);
+                break;
+            case 'modify':
+                selectInteraction.setActive(true);
+                modifyInteraction.setActive(true);
+                break;
+            case 'delete':
+                selectInteraction.setActive(true);
+                break;
+        }
+    }
+    
+    /**
+     * UI 상태 업데이트
+     */
+    function updateUIState() {
+        const elements = getElements();
+        
+        // 실제 적용된 변경사항이 있는지 확인 (position이 -1보다 크면 변경사항이 있음)
+        const hasActiveChanges = history.position >= 0;
+        
+        // Undo/Redo 버튼
+        elements.undoBtn.disabled = history.position < 0;
+        elements.redoBtn.disabled = history.position >= history.changes.length - 1;
+        
+        // 저장/취소 버튼
+        if (!elements.stopBtn.disabled) {
+            // 편집 중에는 저장/취소 비활성화
+            elements.saveBtn.disabled = true;
+            elements.discardBtn.disabled = true;
+        } else {
+            // 편집 중지 상태에서는 적용된 변경사항 있을 때만 활성화
+            elements.saveBtn.disabled = !hasActiveChanges;
+            elements.discardBtn.disabled = !hasActiveChanges;
+        }
+    }
+
+    /**
+     * 편집 상태 리셋
+     */
+    function resetEditState() {
+        const elements = getElements();
+        
+        // 모든 상태 초기화
+        history.changes = [];
+        history.position = -1;
+        editSource.clear();
+        
+        // UI 초기 상태로
+        elements.startBtn.disabled = false;
+        elements.saveBtn.disabled = true;
+        elements.discardBtn.disabled = true;
+        
+        // 속성 테이블 닫기
+        if (attributeTable.popup) {
+            attributeTable.popup.style.display = 'none';
+        }
+
+        // 편집 레이어 숨기기
+        if (editLayer) {
+            editLayer.setVisible(false);
+        }
+        
+        // 편집 플래그 재설정
+        editingFeatures = false;
+        
+        updateUIState();
+    }
+    
+    /**
+     * WFS 트랜잭션 전송
+     */
+    function sendWFSTransaction() {
+        const currentChanges = history.changes.slice(0, history.position + 1);
+        
+        if (!currentChanges || currentChanges.length === 0) {
+            return Promise.reject(new Error('No changes to save'));
+        }
+        
+        return new Promise((resolve, reject) => {
+            const formatWFS = new ol.format.WFS();
+
+            const transOptions = {
+                featureNS: 'http://klums',
+                featurePrefix: 'klums',
+                featureType: 'land_use',
+                srsName: 'EPSG:3857',
+                version: '1.1.0',
+                geometryName: 'geom'
+            };
+
+            let features = {
+                insert: [],
+                update: [],
+                delete: []
+            };
+
+            // 변경사항 분류
+            currentChanges.forEach(change => {
+                switch (change.type) {
+                    case 'insert':
+                        features.insert.push(change.feature);
+                        break;
+                    case 'update':
+                        features.update.push(change.feature);
+                        break;
+                    case 'delete':
+                        features.delete.push(change.feature);
+                        break;
+                }
+            });
+
+            // WFS 트랜잭션 XML 생성
+            const transactionXml = formatWFS.writeTransaction(
+                features.insert,
+                features.update,
+                features.delete,
+                transOptions
+            );
+
+            // 트랜잭션 XML 수정 (필요한 경우)
+            let serializedXml = new XMLSerializer().serializeToString(transactionXml);
+            serializedXml = serializedXml.replace(/<Name>geometry<\/Name>/g, '<Name>geom</Name>');
+            
+
+
+            // 트랜잭션 요청 전송
+            fetch(_GL.MAP_CONFIG.URLS.WFS, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/xml',
+                    'X-CSRF-TOKEN': _GL.csrf.token
+                },
+                body: serializedXml
+            })
+            .then(response => response.text().then(text => {
+                if (!response.ok || text.includes('Exception') || text.includes('Error')) {
+                    throw new Error(`WFS Transaction failed: ${response.status}\nResponse: ${text}`);
+                }
+
+                resolve(text);
+            }))
+            .catch(error => {
+                reject(error);
+            });
+        });
+    }
+    
+    /**
+     * 모듈 정리
+     */
+    function cleanup() {
+        removeInteractions();
+        
+        if (editLayer) {
+            try {
+                editLayer.setVisible(false);
+                instance.removeLayer(editLayer);
+                editLayer = null;
+            } catch (error) {
+
+            }
+        }
+        
+        editSource = null;
+    }
+    
+    /**
+     * 히스토리에 변경사항 추가
+     */
+    function addToHistory(type, feature, originalGeometry = null) {
+        const clonedFeature = feature.clone();
+        const featureId = feature.getId();
+        
+        if (!featureId) {
+
+            return;
+        }
+        
+        clonedFeature.setId(featureId);
+        
+        const change = {
+            type: type,
+            feature: clonedFeature,
+            timestamp: Date.now(),
+            originalGeometry: originalGeometry || feature.getGeometry().clone()
+        };
+
+        // 현재 위치 이후의 변경사항 제거
+        if (history.position < history.changes.length - 1) {
+            history.changes = history.changes.slice(0, history.position + 1);
+        }
+
+        history.changes.push(change);
+        history.position++;
+        
+        updateUIState();
+    }
+    
+    /**
+     * 피처 변경 적용
+     */
+    function applyFeatureChange(change, isUndo = false) {
+        const featureId = change.feature.getId();
+        if (!featureId) {
+            return;
+        }
+
+        const feature = editSource.getFeatureById(featureId);
+        if (!feature && change.type !== 'insert' && !(change.type === 'delete' && isUndo)) {
+            return;
+        }
+
+        switch(change.type) {
+            case 'insert':
+                if (isUndo) {
+                    // Undo: 피처 제거
+                    if (feature) {
+                        editSource.removeFeature(feature);
+                        
+                        // 임시 피처 배열에서도 제거 (temp_ 로 시작하는 ID인 경우에만)
+                        if (featureId.toString().startsWith('temp_')) {
+                            const index = tempFeatures.findIndex(f => f.getId() === featureId);
+                            if (index !== -1) {
+                                tempFeatures.splice(index, 1);
+                            }
+                        }
+                    }
+                } else {
+                    // Redo: 피처 추가
+                    const newFeature = change.feature.clone();
+                    newFeature.setId(featureId);
+                    editSource.addFeature(newFeature);
+                    
+                    // 임시 피처 배열에도 추가 (temp_ 로 시작하는 ID인 경우에만)
+                    if (featureId.toString().startsWith('temp_')) {
+                        // 이미 있는지 확인하고 없으면 추가
+                        const exists = tempFeatures.some(f => f.getId() === featureId);
+                        if (!exists) {
+                            tempFeatures.push(newFeature.clone());
+                        }
+                    }
+                }
+                break;
+                
+            case 'update':
+                if (feature) {
+                    if (isUndo) {
+                        feature.setGeometry(change.originalGeometry.clone());
+                    } else {
+                        feature.setGeometry(change.feature.getGeometry().clone());
+                    }
+                    editSource.dispatchEvent('changefeature');
+                    
+                    // 임시 피처 배열에서도 업데이트 (temp_ 로 시작하는 ID인 경우에만)
+                    if (featureId.toString().startsWith('temp_')) {
+                        const index = tempFeatures.findIndex(f => f.getId() === featureId);
+                        if (index !== -1) {
+                            const updatedFeature = feature.clone();
+                            tempFeatures[index] = updatedFeature;
+                        }
+                    }
+                }
+                break;
+                
+            case 'delete':
+                if (isUndo) {
+                    // Undo: 피처 복원
+                    const restoredFeature = change.feature.clone();
+                    restoredFeature.setId(featureId);
+                    editSource.addFeature(restoredFeature);
+                    
+                    // 임시 피처 배열에도 추가 (temp_ 로 시작하는 ID인 경우에만)
+                    if (featureId.toString().startsWith('temp_')) {
+                        // 이미 있는지 확인하고 없으면 추가
+                        const exists = tempFeatures.some(f => f.getId() === featureId);
+                        if (!exists) {
+                            tempFeatures.push(restoredFeature.clone());
+                        }
+                    }
+                } else {
+                    // Redo: 피처 삭제
+                    if (feature) {
+                        editSource.removeFeature(feature);
+                        
+                        // 임시 피처 배열에서도 제거 (temp_ 로 시작하는 ID인 경우에만)
+                        if (featureId.toString().startsWith('temp_')) {
+                            const index = tempFeatures.findIndex(f => f.getId() === featureId);
+                            if (index !== -1) {
+                                tempFeatures.splice(index, 1);
+                            }
+                        }
+                    }
+                }
+                break;
+        }
+    }
+    
+    /* =====================================================
+    Attribute Table
+======================================================*/
+    /**
+     * 전체 속성 테이블 표시
+     */
+    function showAttributeTable() {
+        if (attributeTable.popup && attributeTable.popup.style.display === 'block') {
+            updateAttributeTable();
+            return;
+        }
+        
+        // 먼저 팝업 생성 (팝업이 없는 경우)
+        if (!attributeTable.popup) {
+            createAttributePopup();
+        }
+        
+        // 피처가 로드되었는지 확인
+        if (editSource.getFeatures().length === 0) {
+            _GL.COMMON.showToast('피처를 먼저 로드합니다...', 'info');
+            // 맵 이동 이벤트는 이미 initializeMapMoveEndHandler()에서 처리하므로 여기서는 추가하지 않음
+            loadLayerFeatures().then(() => {
+                attributeTable.popup.style.display = 'block';
+                updateAttributeTable();
+            }).catch(error => {
+                _GL.COMMON.showToast(`피처 로드 실패: ${error.message}`, 'error');
+            });
+            return;
+        }
+        
+        // 피처가 이미 로드된 경우 바로 표시
+        attributeTable.popup.style.display = 'block';
+        updateAttributeTable();
+    }
+    
+    /**
+     * 특정 피처의 속성 편집 표시
+     */
+    function showAttributeEditor(feature) {
+        attributeTable.currentFeature = feature;
+        
+        syncSelectedFeature();
+        
+        // 이미 패널이 있다면 업데이트만
+        if (attributeTable.popup && attributeTable.popup.style.display === 'block') {
+            updateAttributeEditor(feature);
+            return;
+        }
+        
+        // 속성 편집 패널 생성 또는 표시
+        if (!attributeTable.popup) {
+            createAttributePopup();
+        }
+        
+        attributeTable.popup.style.display = 'block';
+        updateAttributeEditor(feature);
+    }
+    
+    /**
+     * 속성 팝업 생성
+     */
+    function createAttributePopup() {
+        const elements = getElements();
+        
+        elements.popup.innerHTML = `
+            <div class="card h-100">
+                <div class="map-popup-edit-header d-flex justify-content-between align-items-center border-bottom p-3">
+                    <h4 class="m-0">Land Use Information</h4>
+		        	<div class="ms-auto">
+			        	<button class="btn btn-sm btn-primary me-2" id="attrSaveBtn">Save</button>
+			        	<button class="btn btn-sm btn-info me-3" id="attrToggleBtn">Total Features</button>
+		        	</div>
+		        	<button type="button" class="btn-close" id="attrCloseBtn" aria-label="Close"></button>
+                </div>
+                <div class="border-bottom p-3">
+                    <div class="d-flex">
+                        <div class="text-secondary">
+                        	Show
+                        	<div class="mx-2 d-inline-block">
+                            	<input type="text" class="form-control form-control-sm" id="attributePageUnit" value="10" size="3">
+                        	</div>
+                            entries
+                      	</div>
+                        <div class="ms-auto text-secondary">
+                        	Search:
+                        	<div class="ms-2 d-inline-block">
+                            	<input type="text" class="form-control form-control-sm" id="attributeSearchTemp">
+                        	</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="map-popup-edit-content" id="attributeGrid"></div>
+                <div class="map-popup-edit-footer card-footer d-flex align-items-center">
+                    <p class="m-0 text-secondary">Showing <span id="startEntry">0</span> to <span id="endEntry">0</span> of <span id="totalFeatures">0</span> entries</p>
+                    <ul class="pagination m-0 ms-auto" id="paginationControls">
+                        <li class="page-item disabled" id="prevPageItem">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
+                                    <path d="M15 6l-6 6l6 6"></path>
+                                </svg>
+                                prev
+                            </a>
+                        </li>
+                        <!-- 페이지 번호는 동적으로 생성됩니다 -->
+                        <li class="page-item" id="nextPageItem">
+                            <a class="page-link" href="#">
+                                next
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
+                                    <path d="M9 6l6 6l-6 6"></path>
+                                </svg>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        `;
+        
+        attributeTable.popup = elements.popup;
+        
+        // 상태 값 초기화
+        attributeTable.currentPage = 1;
+        attributeTable.pageSize = 10;
+        attributeTable.isFullTableMode = false;
+        
+        // 이벤트 리스너 추가
+        document.getElementById('attrSaveBtn').addEventListener('click', saveAttributeChanges);
+        document.getElementById('attrToggleBtn').addEventListener('click', toggleAttributeTableMode);
+        document.getElementById('attrCloseBtn').addEventListener('click', () => {
+            attributeTable.popup.style.display = 'none';
+            // 팝업을 닫을 때 맵 이벤트 리스너 제거
+            if (attributeTable.mapMoveEndListener) {
+                instance.un('moveend', attributeTable.mapMoveEndListener);
+                attributeTable.mapMoveEndListener = null;
+            }
+        });
+        
+        // 검색 리스너 추가
+        document.getElementById('attributeSearchTemp').addEventListener('keyup', function(e) {
+            // Enter 키를 누르거나 검색어가 변경될 때마다 검색 실행
+            searchFeatures();
+        });
+
+        // 페이지 단위 변경 이벤트 리스너
+        document.getElementById('attributePageUnit').addEventListener('change', function() {
+            const pageUnitValue = parseInt(this.value);
+            if (!isNaN(pageUnitValue) && pageUnitValue > 0) {
+                attributeTable.pageSize = pageUnitValue;
+                attributeTable.currentPage = 1; // 페이지 단위 변경 시 첫 페이지로 이동
+                updateAttributeTable();
+            }
+        });
+        
+        // 페이지네이션 이벤트
+        document.getElementById('prevPageItem').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!this.classList.contains('disabled')) {
+                navigateAttributePage(-1);
+            }
+        });
+        
+        document.getElementById('nextPageItem').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!this.classList.contains('disabled')) {
+                navigateAttributePage(1);
+            }
+        });
+        
+        // 드래그 기능 추가
+        _GL.MAP.setupPopupDragging(attributeTable.popup, '.map-popup-edit-header');
+    }
+
+    /**
+     * 단일 피처 속성 편집기 표시
+     */
+    function updateAttributeEditor(feature) {
+        attributeTable.isFullTableMode = false;
+        document.getElementById('attrToggleBtn').innerText = 'Total Feature';
+        
+        const grid = document.getElementById('attributeGrid');
+        const properties = feature.getProperties();
+        
+        // 필수 필드 목록
+        const requiredFields = ['uslcode', 'kategoria_', 'lclsf_cd', 'sclsf_cd'];
+        
+        let tableHtml = `
+            <div class="table-responsive">
+                <table class="table">
+                    <tbody>
+        `;
+        
+        // 속성별 입력 필드 생성
+        for (const [key, value] of Object.entries(properties)) {
+            // geometry는 제외
+            if (key === 'geometry' || key === 'geom') continue;
+            
+            // 필수 필드인 경우 표시 추가
+            const isRequired = requiredFields.includes(key);
+            const requiredMark = isRequired ? '<span class="text-danger">*</span>' : '';
+            
+            tableHtml += `
+                <tr>
+                    <th class="text-center">${key} ${requiredMark}</th>
+                    <td><input type="text" class="form-control form-control-sm" data-field="${key}" value="${value !== null && value !== undefined ? value : ''}" /></td>
+                </tr>
+            `;
+        }
+        
+        // 필수 필드 설명 추가
+        tableHtml += `
+                </tbody>
+            </table>
+            <div class="small text-secondary mt-2">
+                <span class="text-danger">*</span> 필수 입력 필드
+            </div>
+        </div>`;
+        
+        grid.innerHTML = tableHtml;
+        
+        // 푸터 숨기기
+        document.querySelector('.map-popup-edit-footer').style.display = 'none';
+    }
+
+    /**
+     * 전체 속성 테이블 업데이트
+     */
+    function updateAttributeTable() {
+        attributeTable.isFullTableMode = true;
+        document.getElementById('attrToggleBtn').innerText = 'Selected Feature';
+        
+        // 검색어가 있으면 필터링된 피처를, 없으면 모든 피처를 사용
+        const features = attributeTable.searchTerm && attributeTable.filteredFeatures.length > 0 
+            ? attributeTable.filteredFeatures 
+            : editSource.getFeatures();
+        
+        const grid = document.getElementById('attributeGrid');
+        
+        if (!features || features.length === 0) {
+        	grid.innerHTML = `
+                <div class="p-3">
+                    <div class="alert alert-info">
+                        ${attributeTable.searchTerm ? '검색 결과가 없습니다.' : '현재 영역에 표시할 피처가 없습니다.'}
+                    </div>
+                </div>`;
+                
+            // 페이지네이션 정보 업데이트
+            document.getElementById('startEntry').textContent = 0;
+            document.getElementById('endEntry').textContent = 0;
+            document.getElementById('totalFeatures').textContent = 0;
+            
+            // 페이지네이션 컨트롤 비활성화
+            document.getElementById('prevPageItem').classList.add('disabled');
+            document.getElementById('nextPageItem').classList.add('disabled');
+            
+            // 페이지 번호 제거
+            const pageNumbers = document.querySelectorAll('#paginationControls .page-number');
+            pageNumbers.forEach(item => item.remove());
+            
+            return;
+        }
+        
+        // 페이지네이션 설정
+        const totalFeatures = features.length;
+        const totalPages = Math.ceil(totalFeatures / attributeTable.pageSize);
+        const currentPage = Math.min(attributeTable.currentPage, totalPages || 1);
+        attributeTable.currentPage = currentPage;
+        
+        // 현재 페이지의 피처들
+        const startIndex = (currentPage - 1) * attributeTable.pageSize;
+        const endIndex = Math.min(startIndex + attributeTable.pageSize, totalFeatures);
+        const pageFeatures = features.slice(startIndex, endIndex);
+        
+        // 페이지네이션 정보 업데이트
+        document.getElementById('startEntry').textContent = startIndex + 1;
+        document.getElementById('endEntry').textContent = endIndex;
+        document.getElementById('totalFeatures').textContent = totalFeatures;
+        
+        // 속성 키 순서 유지를 위한 처리
+        // 먼저 속성 테이블 초기 열 순서가 정의되어 있는지 확인
+        if (!attributeTable.columnOrder) {
+            // 초기 속성 키 순서를 설정 (첫 테이블 생성 시에만)
+            attributeTable.columnOrder = [];
+            
+            // 테이블 생성을 위한 모든 키 수집
+            let allKeysSet = new Set();
+            
+            // 모든 피처에서 키 수집
+            pageFeatures.forEach(feature => {
+                const properties = feature.getProperties();
+                Object.keys(properties).forEach(key => {
+                    if (key !== 'geometry' && key !== 'geom') {
+                        allKeysSet.add(key);
+                    }
+                });
+            });
+            
+            // 첫 번째 피처의 순서를 기준으로 순서 설정
+            if (pageFeatures.length > 0) {
+                const firstFeature = pageFeatures[0];
+                const properties = firstFeature.getProperties();
+                
+                // 먼저 첫 번째 피처의 키들을 순서대로 추가
+                Object.keys(properties).forEach(key => {
+                    if (key !== 'geometry' && key !== 'geom' && allKeysSet.has(key)) {
+                        attributeTable.columnOrder.push(key);
+                        allKeysSet.delete(key);
+                    }
+                });
+                
+                // 나머지 키들 추가 (다른 피처에만 존재하는 키)
+                allKeysSet.forEach(key => {
+                    attributeTable.columnOrder.push(key);
+                });
+            } else {
+                // 피처가 없는 경우 기본 배열로 변환
+                attributeTable.columnOrder = Array.from(allKeysSet);
+            }
+        }
+        
+        // 저장된 열 순서 사용
+        const allKeys = attributeTable.columnOrder;
+        
+        // 테이블 헤더
+        let tableHtml = `
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th class="text-center">GID</th>
+                            ${allKeys.map(key => `<th class="text-center">${key}</th>`).join('')}
+                            <th class="text-center">EDIT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        // 피처별 행 생성
+        pageFeatures.forEach(feature => {
+            const properties = feature.getProperties();
+            const featureId = feature.getId() || '';
+            
+            // "land_use." 접두사 제거
+            const cleanId = featureId.replace('land_use.', '');
+            
+            // 현재 선택된 피처인지 확인
+            const isSelected = selectInteraction && 
+                              selectInteraction.getFeatures().getLength() > 0 && 
+                              selectInteraction.getFeatures().item(0).getId() === featureId;
+                              
+            tableHtml += `<tr data-feature-id="${featureId}" class="feature-row ${isSelected ? 'table-primary' : ''}" style="cursor: pointer;">`;
+            tableHtml += `<td class="text-end">${cleanId}</td>`;
+            
+            // 각 속성 값 표시
+            allKeys.forEach(key => {
+                const value = properties[key];
+                
+                // 값 타입에 따른 정렬 클래스 결정
+                let alignClass = '';
+                if (value === null || value === undefined || value === '') {
+                    alignClass = 'text-center'; // null이거나 빈 값은 가운데 정렬
+                } else if (!isNaN(value) && value !== '') {
+                    alignClass = 'text-end';    // 숫자값은 오른쪽 정렬
+                } else {
+                    alignClass = 'text-start';  // 문자열은 왼쪽 정렬
+                }
+                
+                tableHtml += `<td class="${alignClass}">${_GL.COMMON.formatValue(value)}</td>`;
+            });
+            
+            // 작업 버튼
+            tableHtml += `
+                <td>
+                    <button class="btn btn-sm btn-ghost-primary edit-feature-btn" data-feature-id="${featureId}">EDIT</button>
+                </td>
+            `;
+            tableHtml += `</tr>`;
+        });
+        
+        tableHtml += `</tbody></table></div>`;
+        grid.innerHTML = tableHtml;
+        
+        // 페이지네이션 컨트롤 업데이트
+        updatePaginationControls(currentPage, totalPages);
+        
+        // 피처 편집 버튼에 이벤트 리스너 추가
+        document.querySelectorAll('.edit-feature-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const featureId = this.dataset.featureId;
+                const feature = editSource.getFeatureById(featureId);
+                if (feature) {
+                    // 선택된 피처 표시 
+                    if (selectInteraction && selectInteraction.getActive()) {
+                        selectInteraction.getFeatures().clear();
+                        selectInteraction.getFeatures().push(feature);
+                    }
+                    
+                    // 단일 피처 편집 모드로 전환
+                    showAttributeEditor(feature);
+                }
+            });
+        });
+        
+        // 피처 행 클릭 이벤트 리스너 추가
+        document.querySelectorAll('.feature-row').forEach(row => {
+            row.addEventListener('click', function(e) {
+                // Edit 버튼 클릭 시에는 이벤트 중복 실행 방지
+                if (e.target.classList.contains('edit-feature-btn')) {
+                    return;
+                }
+                
+                const featureId = this.dataset.featureId;
+                const feature = editSource.getFeatureById(featureId);
+                
+                if (feature) {
+                    // 선택 인터랙션이 활성화되어 있는지 확인
+                    if (selectInteraction && selectInteraction.getActive()) {
+                        // 선택 초기화
+                        selectInteraction.getFeatures().clear();
+                        // 피처 선택
+                        selectInteraction.getFeatures().push(feature);
+                        
+                        // 선택 상태 동기화
+                        syncSelectedFeature();
+                        
+                        // 맵에서 해당 피처 위치로 이동
+                        const extent = feature.getGeometry().getExtent();
+                        instance.getView().fit(extent, {
+                            padding: [100, 100, 100, 100],
+                            duration: 500,
+                            maxZoom: 19
+                        });
+                        
+                        // 하이라이트 적용
+                        document.querySelectorAll('.feature-row').forEach(r => {
+                            r.classList.remove('table-primary');
+                        });
+                        this.classList.add('table-primary');
+                    } else {
+                        // 선택 인터랙션이 비활성화된 경우 사용자에게 알림
+                        _GL.COMMON.showToast('피처 선택 모드가 비활성화되어 있습니다. 편집 모드를 변경해 주세요.', 'warning');
+                    }
+                }
+            });
+        });
+    }
+    
+    /**
+     * 테이블 행이 현재 뷰에 보이는지 확인
+     */
+    function isRowVisible(row) {
+        const container = document.getElementById('attributeGrid');
+        if (!container || !row) return false;
+        
+        const containerRect = container.getBoundingClientRect();
+        const rowRect = row.getBoundingClientRect();
+        
+        return (
+            rowRect.top >= containerRect.top &&
+            rowRect.bottom <= containerRect.bottom
+        );
+    }
+    
+    /**
+     * 속성 변경 저장
+     */
+    function saveAttributeChanges() {
+        if (!attributeTable.currentFeature) return;
+        
+        const inputs = document.querySelectorAll('#attributeGrid input');
+        const feature = attributeTable.currentFeature;
+        
+        // 변경 전 피처 복제 (히스토리용)
+        const originalFeature = feature.clone();
+        
+        // 속성값 업데이트
+        inputs.forEach(input => {
+            const field = input.dataset.field;
+            const value = input.value;
+            
+            // 숫자형 필드는 숫자로 변환
+            if (!isNaN(value) && value !== '') {
+                feature.set(field, Number(value));
+            } else {
+                feature.set(field, value);
+            }
+        });
+        
+        // 이미 추가된 피처의 속성 변경인 경우 히스토리에 추가
+        if (feature.getId() && !feature.getId().toString().startsWith('temp_')) {
+            addToHistory('update', feature, originalFeature.getGeometry());
+        }
+        
+        _GL.COMMON.showToast('속성 정보가 업데이트되었습니다.', 'success');
+        
+        // 전체 테이블 모드인 경우 테이블 업데이트
+        if (attributeTable.isFullTableMode) {
+            updateAttributeTable();
+        }
+    }
+    
+    /**
+     * 단일/전체 테이블 모드 전환
+     */
+    function toggleAttributeTableMode() {
+        if (attributeTable.isFullTableMode) {
+            // 단일 피처 모드로 전환
+            if (attributeTable.currentFeature) {
+            	syncSelectedFeature();
+                updateAttributeEditor(attributeTable.currentFeature);
+            } else {
+                _GL.COMMON.showToast('먼저 피처를 선택하세요.', 'warning');
+                return;
+            }
+        } else {
+            // 전체 테이블 모드로 전환
+            updateAttributeTable();
+            
+            // 현재 선택된 피처가 있으면 해당 행 찾아서 하이라이트
+            if (attributeTable.currentFeature) {
+                const selectedId = attributeTable.currentFeature.getId();
+                
+                // DOM 업데이트 후 행 찾기 (타이밍 이슈 방지)
+                setTimeout(() => {
+                    highlightFeatureInTable(selectedId);
+                }, 200);
+            }
+        }
+    }
+    
+    /**
+     * 선택된 피처 ID에 해당하는 행을 찾아 하이라이트하고 페이지 이동
+     */
+    function highlightFeatureInTable(featureId) {
+        if (!featureId || !attributeTable.isFullTableMode) return;
+        
+        // 선택된 피처가 현재 필터링된 피처들 중에 있는지 확인
+        const features = attributeTable.searchTerm && attributeTable.filteredFeatures.length > 0 
+            ? attributeTable.filteredFeatures 
+            : editSource.getFeatures();
+        
+        // 피처 ID로 피처 찾기
+        const featureIndex = features.findIndex(f => f.getId() === featureId);
+        
+        if (featureIndex === -1) {
+            return; // 피처가 현재 목록에 없음
+        }
+        
+        // 해당 피처가 있는 페이지 계산
+        const page = Math.floor(featureIndex / attributeTable.pageSize) + 1;
+        // 현재 페이지와 다르면 페이지 이동
+        if (page !== attributeTable.currentPage) {
+            attributeTable.currentPage = page;
+            updateAttributeTable();
+        }
+        
+        // DOM 업데이트 후 행 선택 및 하이라이트
+        setTimeout(() => {
+            // 모든 행에서 선택 클래스 제거
+            document.querySelectorAll('.feature-row').forEach(row => {
+                row.classList.remove('table-primary');
+            });
+            
+            // 선택된 행에 클래스 추가
+            const selectedRow = document.querySelector(`.feature-row[data-feature-id="${featureId}"]`);
+            if (selectedRow) {
+                selectedRow.classList.add('table-primary');
+                
+                // 스크롤 컨테이너 찾기
+                const scrollContainer = document.getElementById('attributeGrid');
+                if (!isRowVisible(selectedRow) && scrollContainer) {
+                    // 약간의 지연 후 스크롤 실행
+                    setTimeout(() => {
+                         selectedRow.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center',
+                            inline: 'nearest'
+                         });
+                    }, 300);
+                }
+            }
+        }, 200);
+    }
+    
+    /**
+     * 피처 검색 기능
+     */
+    function searchFeatures(updateTable = true) {
+        const searchInput = document.getElementById('attributeSearchTemp');
+        const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : attributeTable.searchTerm;
+        
+        // 검색어 저장
+        attributeTable.searchTerm = searchTerm;
+        
+        // 검색어가 없으면 모든 피처 표시
+        if (!searchTerm) {
+            attributeTable.filteredFeatures = [];
+            
+            if (updateTable) {
+                attributeTable.currentPage = 1;
+                updateAttributeTable();
+            }
+            return;
+        }
+        
+        // 모든 피처에서 검색
+        const allFeatures = editSource.getFeatures();
+        const filteredFeatures = allFeatures.filter(feature => {
+            const properties = feature.getProperties();
+            
+            // ID 검색 (land_use. 접두사 제거)
+            const featureId = feature.getId() || '';
+            const cleanId = featureId.toString().replace('land_use.', '');
+            
+            if (cleanId.toLowerCase().includes(searchTerm)) {
+                return true;
+            }
+            
+            // 모든 속성값에서 검색
+            for (const [key, value] of Object.entries(properties)) {
+                if (key === 'geometry' || key === 'geom') continue;
+                
+                // 값을 문자열로 변환하여 검색 (null 처리)
+                const strValue = value !== null && value !== undefined ? value.toString().toLowerCase() : '';
+                
+                if (strValue.includes(searchTerm)) {
+                    return true;
+                }
+            }
+            
+            return false;
+        });
+        
+        // 필터링된 피처 저장 및 테이블 업데이트
+        attributeTable.filteredFeatures = filteredFeatures;
+        
+        if (updateTable) {
+            attributeTable.currentPage = 1;
+            updateAttributeTable();
+        }
+    }
+    
+    /**
+     * selectInteraction과 attributeTable.currentFeature 동기화 함수
+     */
+    function syncSelectedFeature() {
+        if (selectInteraction && selectInteraction.getFeatures().getLength() > 0) {
+            // 맵에서 선택된 피처가 있으면 attributeTable.currentFeature 업데이트
+            attributeTable.currentFeature = selectInteraction.getFeatures().item(0);
+        } else if (attributeTable.currentFeature) {
+            // attributeTable.currentFeature가 있지만 맵에서 선택되지 않았으면 선택
+            if (selectInteraction && selectInteraction.getActive()) {
+                selectInteraction.getFeatures().clear();
+                selectInteraction.getFeatures().push(attributeTable.currentFeature);
+            }
+        }
+    }
+    
+    /**
+     * 페이지네이션 컨트롤 업데이트
+     */
+    function updatePaginationControls(currentPage, totalPages) {
+        const paginationControls = document.getElementById('paginationControls');
+        const prevPageItem = document.getElementById('prevPageItem');
+        const nextPageItem = document.getElementById('nextPageItem');
+        
+        // 이전/다음 버튼 상태 업데이트
+        prevPageItem.classList.toggle('disabled', currentPage <= 1);
+        nextPageItem.classList.toggle('disabled', currentPage >= totalPages);
+        
+        // 기존 페이지 번호 제거
+        const pageNumbers = document.querySelectorAll('#paginationControls .page-number');
+        pageNumbers.forEach(item => item.remove());
+        
+        // 표시할 페이지 수 계산 (최대 5개)
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        
+        // 페이지 범위 조정
+        if (endPage - startPage < 4 && startPage > 1) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        // 페이지 번호 생성
+        for (let i = startPage; i <= endPage; i++) {
+            const pageItem = document.createElement('li');
+            pageItem.className = `page-item page-number ${i === currentPage ? 'active' : ''}`;
+            
+            const pageLink = document.createElement('a');
+            pageLink.className = 'page-link';
+            pageLink.href = '#';
+            pageLink.textContent = i;
+            
+            pageItem.appendChild(pageLink);
+            
+            // 페이지 클릭 이벤트
+            pageItem.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (attributeTable.currentPage !== i) {
+                    attributeTable.currentPage = i;
+                    updateAttributeTable();
+                }
+            });
+            
+            // prevPageItem 다음에 삽입
+            nextPageItem.parentNode.insertBefore(pageItem, nextPageItem);
+        }
+    }
+    
+    /**
+     * 페이지 이동
+     */
+    function navigateAttributePage(direction) {
+        const newPage = attributeTable.currentPage + direction;
+        attributeTable.currentPage = newPage;
+        updateAttributeTable();
+    }
+    
+/* =====================================================
+    Event Handlers
+======================================================*/
+    /**
+     * 맵 이동 후 자동 새로고침 기능
+     */
+    function initializeMapMoveEndHandler() {
+        let moveEndTimeout;
+        
+        instance.on('moveend', function() {
+            if (moveEndTimeout) clearTimeout(moveEndTimeout);
+            
+            moveEndTimeout = setTimeout(function() {
+                const elements = getElements();
+                
+                // 편집 모드가 활성화된 상태이거나 속성 테이블이 열려있는 경우에만 로드
+                const isEditActive = !elements.stopBtn.disabled;
+                const isAttributeTableVisible = attributeTable.popup && 
+                                              attributeTable.popup.style.display === 'block' && 
+                                              attributeTable.isFullTableMode;
+                
+                if (isEditActive || isAttributeTableVisible) {
+                    // 현재 선택된 피처 ID 저장
+                    let selectedFeatureId = null;
+                    if (selectInteraction && selectInteraction.getFeatures().getLength() > 0) {
+                        const selectedFeature = selectInteraction.getFeatures().item(0);
+                        if (selectedFeature) {
+                            selectedFeatureId = selectedFeature.getId();
+                        }
+                    }
+                    
+                    // 현재 검색어와 페이지 상태 저장
+                    const currentSearchTerm = attributeTable.searchTerm;
+                    const currentPage = attributeTable.currentPage;
+                    
+                    // 로딩 표시 (속성 테이블이 열려있는 경우)
+                    if (isAttributeTableVisible) {
+                        const grid = document.getElementById('attributeGrid');
+                        if (grid) {
+                            grid.innerHTML = `
+                                <div class="p-3 text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    loadLayerFeatures()
+                        .then(count => {
+                            // 검색어와 페이지 상태 복원
+                            attributeTable.searchTerm = currentSearchTerm;
+                            attributeTable.currentPage = currentPage;
+                            
+                            // 필터링된 피처 목록 재구성 (검색어가 있는 경우)
+                            if (attributeTable.searchTerm) {
+                                searchFeatures(false); // 테이블 업데이트는 나중에 진행
+                            }
+                            
+                            // 이전에 선택된 피처가 있었다면 다시 선택
+                            if (selectedFeatureId && selectInteraction) {
+                                const reloadedFeature = editSource.getFeatureById(selectedFeatureId);
+                                if (reloadedFeature) {
+                                    // 기존 선택 초기화
+                                    selectInteraction.getFeatures().clear();
+                                    // 피처 다시 선택
+                                    selectInteraction.getFeatures().push(reloadedFeature);
+                                    // 선택 상태 동기화
+                                    syncSelectedFeature();
+                                    
+                                    // 속성 테이블에서 단일 피처 모드였다면 해당 피처 정보 다시 표시
+                                    if (attributeTable.popup && 
+                                        attributeTable.popup.style.display === 'block') {
+                                        if (attributeTable.isFullTableMode) {
+                                            // 전체 테이블 모드에서는 해당 행 하이라이트
+                                            setTimeout(() => highlightFeatureInTable(selectedFeatureId), 300);
+                                        } else {
+                                            // 단일 피처 모드에서는 에디터 업데이트
+                                            attributeTable.currentFeature = reloadedFeature;
+                                            updateAttributeEditor(reloadedFeature);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            if (isAttributeTableVisible) {
+                                updateAttributeTable();
+                                
+                                // 테이블 업데이트 후 선택된 피처 행에 하이라이트 적용
+                                if (selectedFeatureId) {
+                                    setTimeout(() => {
+                                        highlightFeatureInTable(selectedFeatureId);
+                                    }, 200);
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            // 속성 테이블에 오류 표시 (필요한 경우)
+                            if (isAttributeTableVisible) {
+                                const grid = document.getElementById('attributeGrid');
+                                if (grid) {
+                                    grid.innerHTML = `
+                                        <div class="p-3">
+                                            <div class="alert alert-danger">
+                                        		피처 로드 중 오류가 발생했습니다: ${error.message}
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                            }
+                        });
+                }
+            }, 300);
+        });
+    }
+    
+    function handleEditStart() {
+        const elements = getElements();
+
+        // UI 상태 업데이트
+        elements.startBtn.disabled = true;
+        instance.getTargetElement().classList.add('spinner');
+        
+        // 선택 상태 초기화
+        if (selectInteraction) {
+            selectInteraction.getFeatures().clear();
+        }
+        attributeTable.currentFeature = null;
+        
+        editingFeatures = true;
+        
+        // WFS 데이터 로드
+        loadLayerFeatures()
+            .then(() => {
+                // 편집 컨트롤 활성화
+                elements.stopBtn.disabled = false;
+                elements.drawModeBtn.disabled = false;
+                elements.modifyModeBtn.disabled = false;
+                elements.deleteModeBtn.disabled = false;
+                
+                // Draw 모드로 시작
+                elements.drawModeBtn.checked = true;
+                setEditMode('draw');
+                
+                // 속성 테이블 패널 표시
+                if (!attributeTable.popup) {
+                    createAttributePopup();
+                } else {
+                    attributeTable.popup.style.display = 'block';
+                }
+                
+                showAttributeTable();
+                updateUIState();
+            })
+            .catch(error => {
+                // 오류 발생 시 시작 버튼 다시 활성화
+                elements.startBtn.disabled = false;
+                _GL.COMMON.showToast(`편집 시작 실패: ${error.message}`, 'error');
+            })
+            .finally(() => {
+                instance.getTargetElement().classList.remove('spinner');
+            });
+    }
+
+    function handleEditStop() {
+        const elements = getElements();
+        
+        // 변경사항이 있는지 확인
+        if (history.position >= 0) {
+            // 변경사항이 있는 경우
+            elements.saveBtn.disabled = false;
+            elements.discardBtn.disabled = false;
+            elements.startBtn.disabled = false;
+        } else {
+        	resetEditState();
+        }
+
+        elements.stopBtn.disabled = true;
+        elements.drawModeBtn.disabled = true;
+        elements.modifyModeBtn.disabled = true;
+        elements.deleteModeBtn.disabled = true;
+        elements.undoBtn.disabled = true;
+        elements.redoBtn.disabled = true;
+        elements.editMode.forEach(radio => {
+            radio.checked = false;
+        });
+        
+        setEditMode(null);
+    }
+
+    function handleUndo() {
+        if (history.position >= 0) {
+            const change = history.changes[history.position];
+            applyFeatureChange(change, true);
+            history.position--;
+            updateUIState();
+        }
+    }
+
+    function handleRedo() {
+        if (history.position < history.changes.length - 1) {
+            history.position++;
+            const change = history.changes[history.position];
+            applyFeatureChange(change, false);
+            updateUIState();
+        }
+    }
+
+    function handleSave() {
+        // 변경사항 유효성 검사
+        if (!history.changes || history.changes.length === 0) {
+            _GL.COMMON.showToast('저장할 변경사항이 없습니다', 'warning');
+            return;
+        }
+
+        // 저장 확인 모달
+        _GL.COMMON.showAlertModal({
+            title: '변경사항 저장',
+            message: '변경사항을 저장하시겠습니까?',
+            type: 'success',
+            btn1: {
+                text: 'Save',
+	            callback: function() {
+                    instance.getTargetElement().classList.add('spinner');
+
+                    sendWFSTransaction()
+                        .then(() => {
+                            _GL.COMMON.showToast('변경사항이 성공적으로 저장되었습니다', 'success');
+                            try {
+                                tempFeatures.length = 0;
+                                editingFeatures = false;
+                                
+                                _GL.MAP.refreshLanduseLayer();
+                            } catch (refreshError) {
+                                _GL.COMMON.showToast('변경사항이 저장되었으나 화면 갱신에 실패했습니다. 페이지를 새로고침하세요.', 'warning');
+                            }
+                            resetEditState();
+                        })
+                        .catch(error => {
+                            _GL.COMMON.showToast(`변경사항 저장 실패: ${error.message}`, 'error');
+                        })
+                        .finally(() => {
+                            instance.getTargetElement().classList.remove('spinner');
+                        });
+	            }
+            },
+            btn2: {}
+        });
+    }
+
+    function handleDiscard() {
+        _GL.COMMON.showAlertModal({
+            title: '변경사항 취소',
+            message: '정말로 모든 변경사항을 취소하시겠습니까?',
+            type: 'error',
+            btn1: {
+            	text: 'Discard',
+	            callback: function() {
+                    try {
+                        tempFeatures.length = 0;
+                        editingFeatures = false;
+                        
+                    	resetEditState();
+                        _GL.COMMON.showToast('변경사항이 취소되었습니다', 'info');
+                    } catch (error) {
+                        _GL.COMMON.showToast('변경사항 취소 중 오류 발생', 'error');
+                    }
+	            }
+            },
+            btn2: {}
+        });
+    }
+
+/* =====================================================
+    Event Listeners
+======================================================*/
+    function initializeEventListeners() {
+        const elements = getElements();
+
+        // 편집 시작/종료
+        elements.startBtn.addEventListener('click', handleEditStart);
+        elements.stopBtn.addEventListener('click', handleEditStop);
+        
+        // Undo/Redo
+        elements.undoBtn.addEventListener('click', handleUndo);
+        elements.redoBtn.addEventListener('click', handleRedo);
+
+        // 편집 모드 변경
+        elements.drawModeBtn.addEventListener('change', () => setEditMode('draw'));
+        elements.modifyModeBtn.addEventListener('change', () => setEditMode('modify'));
+        elements.deleteModeBtn.addEventListener('change', () => setEditMode('delete'));
+        
+        // 저장/취소
+        elements.saveBtn.addEventListener('click', handleSave);
+        elements.discardBtn.addEventListener('click', handleDiscard);
+    }
+
+    // public API
+    return {
+        init: function() {
+            if (initialized) return;
+            instance = _GL.MAP.getInstance();
+            initializeUIState();
+            initializeEditLayer();
+            initializeInteractions();
+            initializeEventListeners();
+            initializeMapMoveEndHandler();
+            initialized = true;
+        },
+        destroy: function() {
+            if (!initialized) return;
+            cleanup();
+            initialized = false;
+        }
+    };
+})();
+
+// DOM 로드 완료 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    _GL.MAP_EDIT.init();
+});

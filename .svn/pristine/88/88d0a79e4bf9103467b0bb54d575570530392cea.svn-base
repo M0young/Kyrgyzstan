@@ -1,0 +1,265 @@
+// roleManager.js
+// _GL.csrf.token와 _GL.currentUserName (로그인 사용자 이름) 등이 전역 변수로 할당되어 있어야 합니다.
+_GL.ROLE = (function () {
+    'use strict';
+
+    let initialized = false;
+    let currentGroupNo = null;  // 현재 선택된 그룹 번호 저장
+
+    /**
+     * DOM 요소를 가져옵니다.
+     */
+    function getElements() {
+        return {
+            roleTableBody: document.querySelector('#role-table-body'),
+            createModal: document.getElementById('create-modal-report'),
+            createButton: document.querySelector('.create-btn'),
+            cancelButton: document.getElementById('cancelCreateRole'),
+            saveButton: document.getElementById('saveCreateRole'),
+            roleNameInput: document.querySelector('#create-modal-report input[placeholder="Enter role name"]'),
+            roleTitle: document.querySelector('.role-title'),
+            // authority 카드의 SAVE 버튼 (class "save-btn" within role-authority-card)
+            authoritySaveButton: document.querySelector('.role-authority-card .save-btn')
+        };
+    }
+
+    /**
+     * 역할 목록 데이터를 가져와 테이블에 출력합니다.
+     */
+    function fetchRoleData() {
+        const elements = getElements();
+        if (!elements.roleTableBody) return;
+
+        elements.roleTableBody.innerHTML = `<tr><td colspan="6" class="text-center">Loading...</td></tr>`;
+
+        fetch('/klums/api/role/list', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': _GL.csrf.token
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const roles = data.data || [];
+            elements.roleTableBody.innerHTML = '';
+
+            if (roles.length === 0) {
+                elements.roleTableBody.innerHTML = `<tr><td colspan="6" class="text-center">No results found.</td></tr>`;
+                return;
+            }
+
+            roles.forEach((role, index) => {
+                const row = `<tr data-group-name="${role.group_nm}">
+                    <td>${index + 1}</td>
+                    <td class="role-name clickable">${role.group_nm}</td>
+                    <td>${role.rgtr}</td>
+                    <td>${role.reg_dt}</td>
+                    <td>${role.mdfcn_dt}</td>
+                    <td><button class="btn btn-sm btn-primary edit-button" data-group-no="${role.group_no}">EDIT</button></td>
+                </tr>`;
+                elements.roleTableBody.insertAdjacentHTML('beforeend', row);
+            });
+        })
+        .catch(() => {
+            elements.roleTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Failed to load roles</td></tr>`;
+        });
+    }
+
+    /**
+     * create modal 이벤트 설정
+     */
+    function setupCreateModalEvent() {
+        const elements = getElements();
+        if (!elements.createButton || !elements.createModal) return;
+
+        elements.createButton.addEventListener('click', function () {
+            const modalInstance = new bootstrap.Modal(elements.createModal);
+            modalInstance.show();
+        });
+
+        if (elements.cancelButton) {
+            elements.cancelButton.addEventListener('click', function () {
+                const modalInstance = bootstrap.Modal.getInstance(elements.createModal);
+                if (modalInstance) modalInstance.hide();
+            });
+        }
+    }
+
+    /**
+     * 역할 생성 SAVE 버튼 이벤트 설정
+     */
+    function setupCreateRoleSaveEvent() {
+        const elements = getElements();
+        if (!elements.saveButton || !elements.roleNameInput) return;
+
+        elements.saveButton.removeEventListener('click', handleCreateRoleSave);
+        elements.saveButton.addEventListener('click', handleCreateRoleSave);
+    }
+
+    /**
+     * 역할 생성 처리 함수
+     */
+    function handleCreateRoleSave() {
+        const elements = getElements();
+        const roleName = elements.roleNameInput.value.trim();
+        const registrant = _GL.currentUserName || 'TestUser';
+        if (!roleName) {
+            alert("You must enter the Role Name.");
+            return;
+        }
+        fetch('/klums/api/role/insert', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': _GL.csrf.token
+            },
+            body: JSON.stringify({ group_nm: roleName, rgtr: registrant })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Role created successfully.');
+                const modalInstance = bootstrap.Modal.getInstance(elements.createModal);
+                if (modalInstance) modalInstance.hide();
+                elements.roleNameInput.value = '';
+                fetchRoleData();
+            } else {
+                alert('Role creation failed: ' + (data.message || 'Unknown error.'));
+            }
+        })
+        .catch(err => {
+            console.error("Error creating role:", err);
+            alert('An error occurred while creating the role. Please contact the administrator.');
+        });
+    }
+
+    /**
+     * 선택된 그룹의 권한 정보를 가져와 체크박스 및 역할 제목을 업데이트합니다.
+     */
+    function fetchAuthorityData(groupNo, groupName, disableCheckboxes = false) {
+        currentGroupNo = groupNo;
+        const url = `/klums/api/role/getInfo`;
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': _GL.csrf.token
+            },
+            body: JSON.stringify({ group_no: groupNo })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const authorityList = data.data || [];
+            console.log("DEBUG: API에서 받은 authorityList =", authorityList);
+            document.querySelectorAll('.form-check-input[data-authry-no]').forEach(checkbox => {
+                let authryNo = Number(checkbox.getAttribute('data-authry-no'));
+                checkbox.checked = authorityList.includes(authryNo);
+                checkbox.disabled = disableCheckboxes;
+            });
+            document.querySelectorAll(".parent-checkbox").forEach(parent => {
+                const childCheckboxes = parent.closest(".accordion-item").querySelectorAll(".child-checkbox");
+                const allChecked = Array.from(childCheckboxes).every(cb => cb.checked);
+                parent.checked = allChecked;
+                parent.disabled = disableCheckboxes;
+            });
+            const elements = getElements();
+            if (elements.roleTitle) {
+                elements.roleTitle.textContent = `Role - ${groupName}`;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching authority data:', error);
+        });
+    }
+
+    /**
+     * 역할 리스트 행 클릭 이벤트 설정
+     */
+    function setupRoleListEvents() {
+        const elements = getElements();
+        if (!elements.roleTableBody) {
+            console.error('Role table body not found');
+            return;
+        }
+        elements.roleTableBody.addEventListener('click', function(e) {
+            const target = e.target;
+            const row = target.closest('tr');
+            if (!row) return;
+            const editBtn = row.querySelector('.edit-button');
+            let groupNo = editBtn ? editBtn.getAttribute('data-group-no') : null;
+            const groupName = row.getAttribute('data-group-name') || row.cells[1].textContent;
+            if (!groupNo) return;
+            if (target.classList.contains('edit-button')) {
+                // 편집 모드: 체크박스 활성화
+                fetchAuthorityData(groupNo, groupName, false);
+            } else {
+                // 보기 전용: 체크박스 비활성화
+                fetchAuthorityData(groupNo, groupName, true);
+            }
+        });
+    }
+
+    /**
+     * authority 카드의 SAVE 버튼 이벤트 설정
+     * - 선택된 체크박스의 authry_no들을 모아 updateAuthList API로 전송
+     */
+    function setupAuthoritySaveEvent() {
+        const elements = getElements();
+        const saveBtn = elements.authoritySaveButton;
+        if (!saveBtn) return;
+        saveBtn.addEventListener('click', function() {
+            if (currentGroupNo == null) {
+                alert("No role selected.");
+                return;
+            }
+            const checkboxes = document.querySelectorAll('.role-authority-card input.form-check-input[data-authry-no]');
+            let selectedAuthryNos = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    selectedAuthryNos.push(Number(cb.getAttribute('data-authry-no')));
+                }
+            });
+            fetch('/klums/api/role/updateAuthList', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': _GL.csrf.token
+                },
+                body: JSON.stringify({
+                    group_no: currentGroupNo,
+                    authry_nos: selectedAuthryNos
+                })
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            }).then(data => {
+                if (data.success) {
+                    alert("권한 업데이트 완료");
+                } else {
+                    alert("권한 업데이트 실패: " + (data.message || "Unknown error."));
+                }
+            }).catch(err => {
+                console.error("Error updating authority:", err);
+                alert("권한 업데이트 실패");
+            });
+        });
+    }
+
+    function init() {
+        setupCreateModalEvent();
+        setupCreateRoleSaveEvent();
+        fetchRoleData();
+        setupRoleListEvents();
+        setupAuthoritySaveEvent();
+        initialized = true;
+    }
+
+    return { init };
+})();
+
+document.addEventListener('DOMContentLoaded', function () {
+    _GL.ROLE.init();
+});

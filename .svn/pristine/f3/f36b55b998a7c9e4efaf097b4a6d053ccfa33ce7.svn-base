@@ -1,0 +1,317 @@
+@charset "UTF-8";
+
+/* =====================================================
+   Sidebar - main
+====================================================== */
+/* 사이드바 기본*/
+#sidebar-admin.navbar-vertical.navbar-expand-lg {
+    width: 20rem;
+    top: 56px;
+}
+
+/* =====================================================
+   Sidebar - item
+====================================================== */
+/* 디자인 수정*/
+#sidebar-admin .nav-item {
+    padding: 8px 12px;
+}
+
+/* =====================================================
+   Sidebar - link
+====================================================== */
+/* 링크 동작 처리 */
+#sidebar-admin .nav-link {
+    transition: all 0.4s ease-out;
+}
+
+/* 사이드바 활성 링크*/
+#sidebar-admin.navbar-vertical .nav-link.active {
+  background-color: rgba(var(--tblr-emphasis-color-rgb), 0.05);
+  color: var(--tblr-primary);
+  font-weight: 500;
+}
+
+/* 사이드바 마우스 오버 활성 링크*/
+#sidebar-admin.navbar-vertical .nav-link:hover {
+    background-color: rgba(var(--tblr-emphasis-color-rgb), 0.075);
+    transform: translateY(-1px);
+}
+
+/* 사이드바 내부 활성 링크의 아이콘 */
+#sidebar-admin .nav-link.active .nav-link-icon{
+    color: var(--tblr-primary);
+}
+
+
+
+
+
+
+/* =====================================================
+   page - main
+====================================================== */
+/* 사이드바에 맞춰 margin 수정 */
+.page-role .navbar-expand-lg.navbar-vertical~.page-wrapper {
+	margin-left: 20rem;	
+}
+
+/* =====================================================
+   page - title
+====================================================== */
+/* page title style */
+.page-role .page-title{
+	font-size: 25px;
+	font-weight: 700;
+	color: inherit;
+	text-align: left;
+	text-transform: uppercase;
+	position: relative;
+	align-items: center;
+}
+
+/* page title 아이콘 추가 */
+.page-role .page-title::before {
+  content: "▶︎"; 
+  margin-right: 10px;
+  font-size: 20px;
+}
+
+/* =====================================================
+   page - header
+====================================================== */
+/* page header style */
+.page-role .page-header .container-xl {
+	margin: 0px;
+	padding-left: 75px;
+	max-width: 1600px;
+}
+
+/* =====================================================
+   page - body
+====================================================== */
+/* page body style */
+.page-role .page-body .container-xl {
+	margin: 0px;
+	padding-left: 75px;
+	padding-right: 75px;
+	max-width: 1600px;
+}
+
+
+
+
+
+/* =====================================================
+   
+   Role List
+   
+====================================================== */
+
+/* =====================================================
+   card - main
+====================================================== */
+/* card 전체 스타일 */
+.page-role #role-list-card.card {
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* =====================================================
+   card - header
+====================================================== */
+/* card-header 스타일 */
+.page-role #role-list-card .card-header {
+	padding-top: 10px;
+	padding-bottom: 10px;
+	background-color: var(--tblr-card-cap-bg);
+}
+
+/* card 제목 스타일 */
+.page-role #role-list-card .card-title {
+	font-size: 18px;
+	font-weight: bold;
+}
+
+
+
+
+/* =====================================================
+   card - body
+====================================================== */
+/* card-body 테이블 분리 */
+.page-role #role-list-card .card-body {
+	margin: 10px;
+	padding: 0px;
+	
+}
+
+/* =====================================================
+   card - footer
+====================================================== */
+/* card-footer 스타일 */
+.page-role #role-list-card .card-footer {
+	padding-top: 5px;
+	padding-bottom: 5px;
+}
+
+/* pagination */
+.page-role #role-list-card .pagination {
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* pagination 내 SVG 아이콘 스타일 */
+.page-role #role-list-card .pagination .page-link svg {
+  width: 20px; 
+  height: 18px;
+  margin: 0;
+}
+
+
+/* =====================================================
+   table
+====================================================== */
+/* table text 가운데 정렬 */
+.page-role #role-list-card .table th,
+.page-role #role-list-card .table td {
+	text-align: center;
+}
+
+
+
+
+
+
+
+
+/* =====================================================
+   
+   Role Authority
+   
+====================================================== */
+
+/* =====================================================
+   card - main
+====================================================== */
+/* card 전체 스타일 */
+.page-role #role-authority-card.card {
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* =====================================================
+   card - header
+====================================================== */
+/* card-header 스타일 */
+.page-role #role-authority-card .card-header {
+ 	background-color: var(--tblr-card-cap-bg);
+}
+
+/* card 제목 스타일 */
+.page-role #role-authority-card .card-title {
+	font-size: 18px;
+	font-weight: bold;
+}
+
+
+/* =====================================================
+   card - body
+====================================================== */
+/* card-body 스타일 */
+.page-role #role-authority-card .card-body {
+	padding-bottom: 0px;
+}
+
+/* card 소제목 스타일 */
+.page-role #role-authority-card .role-title {
+	font-size: 15px;
+}
+
+
+/* =====================================================
+   card - footer
+====================================================== */
+/* card-footer 스타일 */
+.page-role #role-authority-card .card-footer {
+	background-color: transparent;
+}
+
+/* =====================================================
+   accordion
+====================================================== */
+/* 체크박스 위치 수정 */
+.page-role #role-authority-card .accordion-header {
+	position: relative;
+	background-color: var(--tblr-card-cap-bg);
+}
+
+.page-role #role-authority-card #parent-checkbox {
+	position: absolute;
+	left: 13px;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 10;
+}
+
+.page-role #role-authority-card .accordion span {
+	margin-left: 20px;
+}
+
+/* 하위 아코디언 스타일 수정 */
+.page-role #role-authority-card .pt-0 {
+	padding-bottom: 0px;
+}
+
+
+
+
+
+/* =====================================================
+   modal - edit
+====================================================== */
+/* modal 기본 스타일 */
+#create-modal-report .modal-content {
+	width: 70%;
+	margin: auto;
+	transform: translate(10px, 10px);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

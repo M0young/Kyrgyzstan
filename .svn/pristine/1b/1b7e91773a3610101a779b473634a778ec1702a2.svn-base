@@ -1,0 +1,262 @@
+@charset "UTF-8";
+
+/* =====================================================
+   sidebar - main
+====================================================== */
+.navbar-vertical {
+  width: 20rem !important;
+  min-height: 100vh;
+  transition: transform 0.3s ease;
+  position: fixed;
+  left: 0;
+  height: calc(100vh - 56px);
+  overflow-y: auto;
+  margin-top: 56px;
+  z-index: 1000;
+}
+
+/* 메인 컨텐츠 */
+.page-wrapper {
+  margin-left: 20rem;
+  padding-top: 56px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.navbar-vertical.collapsed + .page-wrapper {
+  margin-left: 0;
+  transition: margin-left 0.3s ease;
+}
+
+/* 헤더 고정 */
+header.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1050;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 음영 효과 추가 */
+}
+
+.container-fluid {
+  align-items: stretch !important;
+}
+
+.navbar-vertical .nav-link.active {
+  background-color: rgba(32, 107, 196, 0.06);
+  color: var(--tblr-primary);
+  font-weight: 500;
+}
+
+
+/* =====================================================
+   table - admin
+====================================================== */
+.table {
+    --tblr-table-color-type: initial;
+    --tblr-table-bg-type: initial;
+    --tblr-table-color-state: initial;
+    --tblr-table-bg-state: initial;
+    --tblr-table-color: inherit;
+    --tblr-table-bg: transparent;
+    --tblr-table-border-color: var(--tblr-border-color-translucent);
+    --tblr-table-accent-bg: transparent;
+    --tblr-table-striped-color: inherit;
+    --tblr-table-striped-bg: var(--tblr-bg-surface-tertiary);
+    --tblr-table-active-color: inherit;
+    --tblr-table-active-bg: rgba(var(--tblr-emphasis-color-rgb), 0.1);
+    --tblr-table-hover-color: inherit;
+    --tblr-table-hover-bg: rgba(var(--tblr-emphasis-color-rgb), 0.075);
+    width: 100%;
+    margin-bottom: 1rem;
+    vertical-align: top;
+    border-color: var(--tblr-table-border-color);
+  
+}
+
+
+.card-body {
+  padding: 20px;
+  margin: 0 10px 10px 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.table th,
+.table td {
+  padding: 10px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    columns: 10px 6;
+}
+/* card-footer의 border 규칙이 불분명하여 주석 처리함 */
+/* .card-footer {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  border: 1px solid #dee2e6;
+} */
+.card-footer {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.card-header {
+  padding: 10px 20px;
+  margin-bottom: 10px; /* 헤더와 테이블 간의 여백 추가 */
+  color: var(--tblr-body-color);
+  background-color: var(--tblr-card-bg);
+}
+
+
+
+.table-hover tbody tr:hover {
+  background-color: var(--tblr-card-bg);
+}
+
+.page-body .input-group {
+  width: 300px; /* 검색 창 크기 조정 */
+}
+
+/* =====================================================
+   EDIT modal - admin
+====================================================== */
+
+
+/* SAVE 버튼 */
+.modal-footer .btn-primary {
+
+  border: 1px solid #b8b8b8;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+  position: absolute;
+  left: 31px;
+  height: 33px;
+}
+
+/* SAVE 버튼 호버 */
+.modal-footer .btn-primary:hover {
+  background-color: #e2e6ea;
+  color: #000;
+  border-color: #a0a0a0;
+}
+
+/* CANCEL 버튼 */
+.modal-footer .btn-secondary {
+  background-color: #f8f9fa;
+  color: #000;
+  border: 1px solid #b8b8b8;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+  position: absolute;
+  left: 111px;
+  height: 33px;
+}
+
+/* CANCEL 버튼 호버 */
+.modal-footer .btn-secondary:hover {
+  background-color: #e2e6ea;
+  color: #000;
+  border-color: #a0a0a0;
+}
+.modal-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 70%;
+    color: var(--tblr-modal-color);
+    pointer-events: auto;
+    background-color: var(--tblr-modal-bg);
+    background-clip: padding-box;
+    border: var(--tblr-modal-border-width) solid var(--tblr-modal-border-color);
+    border-radius: var(--tblr-modal-border-radius);
+    box-shadow: var(--tblr-modal-box-shadow);
+    outline: 0;
+    max-width: 600px;
+    margin: auto;
+    top: 50%;
+    /* left: 50%; */
+    transform: translate(10px, 10px);
+}
+
+/* DELETE 버튼 */
+.modal-footer .btn-outline-danger {
+  background-color: transparent;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+  transition: all 0.3s ease-in-out;
+  position: absolute;
+  right: 31px;
+  height: 33px;
+}
+
+/* DELETE 버튼 호버 */
+.modal-footer .btn-outline-danger:hover {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.modal-footer {
+  border-top: thin;
+  padding: 29px 10px;
+}
+
+/* 드롭다운 화살표 스타일 */
+.select-with-arrow {
+  appearance: none; /* 기본 화살표 제거 */
+  background: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>')
+    no-repeat right 10px center;
+  background-size: 1em; /* 화살표 크기 */
+  padding-right: 2em; /* 화살표 영역 확보 */
+  cursor: pointer;
+  position: relative;
+}
+
+/* 화살표 영역에 커서 변경 */
+.select-with-arrow::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2em; /* 화살표 영역 너비 */
+  height: 100%; /* 드롭다운 전체 높이 */
+  cursor: pointer;
+  z-index: 1;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center; /* 가운데 정렬 */
+  align-items: center; /* 세로 정렬 */
+  gap: 8px; /* 버튼 간 간격 */
+  margin-top: 10px; /* 위로 여백 */
+  padding: 0;
+  list-style: none; /* 기본 리스트 스타일 제거 */
+}
+
+.pagination .page-link svg {
+  width: 20px; /* 아이콘 크기 */
+  height: 18px; /* 아이콘 크기 */
+  margin: 0; /* 아이콘 주변 여백 제거 */
+}
+
+/* Page Title 스타일 */
+.page-title {
+  font-size: 25px; /* 글자 크기 조정 */
+  font-weight: 700; /* 더 두껍게 */
+  color: inherit;
+  text-align: left;
+  text-transform: uppercase; /* 모든 글자를 대문자로 */
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* 아이콘 추가 ➤➡️▶︎ */
+.page-title::before {
+  content: "▶︎"; /* 원하는 아이콘 (이모지 또는 FontAwesome) */
+  margin-right: 10px;
+  font-size: 20px;
+}

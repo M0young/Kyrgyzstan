@@ -1,0 +1,22 @@
+package egovframework.main.admin.role.service;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class RoleVO {
+    private Integer group_no;
+    private Integer authry_no;
+    private String authry_cd;
+    private String reg_dt;
+    private String mdfcn_dt;
+    private String user_nm;
+    private String group_nm;
+    private String authry_nm;
+    private String rgtr;
+    public RoleVO(Integer groupNo, Integer authryNo) {
+        this.group_no = groupNo;
+        this.authry_no = authryNo;
+    }
+}

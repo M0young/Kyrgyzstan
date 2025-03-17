@@ -1,0 +1,301 @@
+@charset "UTF-8";
+
+/* =====================================================
+   sidebar - main
+====================================================== */
+.navbar-vertical {
+  width: 20rem !important;
+  min-height: 100vh;
+  transition: transform 0.3s ease;
+  position: fixed;
+  left: 0;
+  height: calc(100vh - 56px);
+  overflow-y: auto;
+  margin-top: 56px;
+  z-index: 1000;
+}
+
+/* 메인 컨텐츠 */
+.page-wrapper {
+  margin-left: 20rem;
+  padding-top: 56px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.navbar-vertical.collapsed + .page-wrapper {
+  margin-left: 0;
+  transition: margin-left 0.3s ease;
+}
+
+/* 헤더 고정 */
+header.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1050;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 음영 효과 추가 */
+}
+
+.navbar-vertical.collapsed {
+  transform: translateX(-100%);
+}
+
+.container-fluid {
+  align-items: stretch !important;
+}
+
+/* =====================================================
+   table - admin
+====================================================== */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0; /* 여백이 테이블 안에서 생기지 않도록 */
+}
+
+.card {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-body {
+  padding: 20px;
+  margin: 0 10px 10px 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.table th,
+.table td {
+  border: 1px solid #dee2e6;
+  padding: 10px;
+  text-align: center;
+  font-size: 14px;
+}
+
+/* card-footer의 border 규칙이 불분명하여 주석 처리함 */
+/* .card-footer {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  border: 1px solid #dee2e6;
+} */
+.card-footer {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.card-header {
+  padding: 10px 20px;
+  margin-bottom: 10px; /* 헤더와 테이블 간의 여백 추가 */
+  color: var(--tblr-body-color);
+  background-color: var(--tblr-card-bg);
+}
+
+.table-bordered {
+  border: 1px solid #dee2e6; /* 전체 테두리 스타일 */
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f8f9fa; /* 호버 시 배경색 추가 */
+}
+
+.page-body .input-group {
+  width: 300px; /* 검색 창 크기 조정 */
+}
+
+/* =====================================================
+   EDIT modal - admin
+====================================================== */
+/* 모달 배경 */
+.modal.fade {
+  display: none;
+  position: fixed;
+  z-index: 1050;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* 모달 애니메이션 */
+.modal.show {
+  display: block;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 모달 다이얼로그 */
+.modal-dialog {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 500px;
+  z-index: 1050;
+  height: auto;
+}
+
+/* 모달 컨텐츠 */
+.modal-content {
+  background: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  animation: slideDown 0.3s ease-in-out;
+  height: auto;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* 모달 헤더 */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ddd;
+}
+
+/* 닫기 버튼 */
+.btn-close {
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+}
+
+/* SAVE 버튼 */
+.modal-footer .btn-primary {
+  background-color: #f8f9fa;
+  color: #000;
+  border: 1px solid #b8b8b8;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+  position: absolute;
+  left: 31px;
+  height: 33px;
+}
+
+/* SAVE 버튼 호버 */
+.modal-footer .btn-primary:hover {
+  background-color: #e2e6ea;
+  color: #000;
+  border-color: #a0a0a0;
+}
+
+/* CANCEL 버튼 */
+.modal-footer .btn-secondary {
+  background-color: #f8f9fa;
+  color: #000;
+  border: 1px solid #b8b8b8;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+  position: absolute;
+  left: 111px;
+  height: 33px;
+}
+
+/* CANCEL 버튼 호버 */
+.modal-footer .btn-secondary:hover {
+  background-color: #e2e6ea;
+  color: #000;
+  border-color: #a0a0a0;
+}
+
+/* DELETE 버튼 */
+.modal-footer .btn-outline-danger {
+  background-color: transparent;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+  transition: all 0.3s ease-in-out;
+  position: absolute;
+  right: 31px;
+  height: 33px;
+}
+
+/* DELETE 버튼 호버 */
+.modal-footer .btn-outline-danger:hover {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.modal-footer {
+  background-color: #e2e6ea;
+  border-top: thin;
+  padding: 29px 10px;
+}
+
+/* 드롭다운 화살표 스타일 */
+.select-with-arrow {
+  appearance: none; /* 기본 화살표 제거 */
+  background: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>')
+    no-repeat right 10px center;
+  background-size: 1em; /* 화살표 크기 */
+  padding-right: 2em; /* 화살표 영역 확보 */
+  cursor: pointer;
+  position: relative;
+}
+
+/* 화살표 영역에 커서 변경 */
+.select-with-arrow::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2em; /* 화살표 영역 너비 */
+  height: 100%; /* 드롭다운 전체 높이 */
+  cursor: pointer;
+  z-index: 1;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center; /* 가운데 정렬 */
+  align-items: center; /* 세로 정렬 */
+  gap: 8px; /* 버튼 간 간격 */
+  margin-top: 10px; /* 위로 여백 */
+  padding: 0;
+  list-style: none; /* 기본 리스트 스타일 제거 */
+}
+
+.pagination .page-link svg {
+  width: 20px; /* 아이콘 크기 */
+  height: 18px; /* 아이콘 크기 */
+  margin: 0; /* 아이콘 주변 여백 제거 */
+}
+
+/* Page Title 스타일 */
+.page-title {
+  font-size: 25px; /* 글자 크기 조정 */
+  font-weight: 700; /* 더 두껍게 */
+  color: var(--tblr-body-color);
+  text-align: left;
+  text-transform: uppercase; /* 모든 글자를 대문자로 */
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 아이콘 추가 ➤➡️▶︎ */
+.page-title::before {
+  content: "▶︎"; /* 원하는 아이콘 (이모지 또는 FontAwesome) */
+  margin-right: 10px;
+  font-size: 20px;
+}

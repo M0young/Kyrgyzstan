@@ -1,0 +1,75 @@
+/*========================================================
+    DATE: 2024. 02
+    AUTHOR: MOYOUNG
+    DESC: Map Search Module
+========================================================*/
+_GL.MAP_SEARCH = (function() {
+    'use strict';
+    
+    let initialized = false;
+        
+    /**
+     * DOM 요소 가져오기
+     */
+    function getElements(type) {
+	   switch(type) {
+	       case 'layer':
+	           return {
+	               form: {
+	                   uploadForm: document.getElementById('layerUploadForm'),
+	                   layerType: document.getElementById('layerType'),
+	                   process: document.getElementsByName('layerProcess'),
+	                   fileInput: document.getElementById('layerFile')
+	               },
+	               progress: {
+	                   area: document.getElementById('progressArea'),
+	                   bar: document.getElementById('progressBar'),
+	                   text: document.getElementById('progressText')
+	               },
+	               buttons: {
+	                   clear: document.getElementById('layerClearBtn'),
+	                   upload: document.getElementById('layerUploadBtn')
+	               }
+	           };
+	       case 'symbol':
+	           return {
+	               form: {
+	                   uploadForm: document.getElementById('symbolUploadForm'),
+	                   symbolType: document.getElementById('symbolType'), 
+	                   fileInput: document.getElementById('symbolFile')
+	               },
+	               buttons: {
+	                   clear: document.getElementById('symbolClearBtn'),
+	                   upload: document.getElementById('symbolUploadBtn')
+	               }
+	           };
+    	}
+    }
+
+/* =====================================================
+    Integrated Search
+======================================================*/
+
+    
+    
+/* =====================================================
+    Event Handlers
+======================================================*/
+    function initializeEventListeners() {
+    }
+    
+
+    // public API
+    return {
+        init: function() {
+            if (initialized) return;
+            initializeEventListeners();
+            initialized = true;
+        }
+    };
+})();
+
+// DOM 로드 완료 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    _GL.MAP_SEARCH.init();
+});

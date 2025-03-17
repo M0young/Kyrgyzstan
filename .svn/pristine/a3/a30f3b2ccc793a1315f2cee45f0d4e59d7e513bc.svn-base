@@ -1,0 +1,336 @@
+/*========================================================
+    DATE: 2024. 02
+    AUTHOR: MOYOUNG
+    DESC: Map Edit Module
+========================================================*/
+_GL.MAP_EDIT = (function() {
+    'use strict';
+
+    let initialized = false;
+    let instance = null;
+    let activeToolbarButton = null;
+
+    const sources = {
+        edit: null
+    };
+    
+    const transaction = {
+        manager: null,
+        pendingChanges: [],
+        originalFeatures: {},
+        undoStack: [],
+        redoStack: []
+    };
+
+    /**
+     * DOM 요소 가져오기
+     */
+    function getElements(type) {
+        switch(type) {
+            case 'toolbar':
+                return {
+                    saveBtn: document.getElementById('saveButton'),
+                    discardBtn: document.getElementById('discardButton'),
+                    undoBtn: document.getElementById('undoButton'),
+                    redoBtn: document.getElementById('redoButton')
+                };
+        }
+    }
+
+    /**
+     * 편집 소스 초기화
+     */
+    function initializeSources() {
+        sources.edit = new ol.source.Vector();
+    }
+
+    /**
+     * WFS 트랜잭션 매니저 초기화
+     */
+    function initializeTransactionManager() {
+        transaction.manager = {
+            addChange: function(operation, feature) {
+                if (!transaction.originalFeatures[feature.id]) {
+                    transaction.originalFeatures[feature.id] = feature.clone();
+                }
+                
+                const change = {
+                    operation: operation,
+                    feature: feature,
+                    timestamp: new Date().getTime()
+                };
+                
+                transaction.pendingChanges.push(change);
+                transaction.undoStack.push(change);
+                transaction.redoStack = [];
+                
+                updateUIState();
+            },
+            
+            undo: function(callback) {
+                if (transaction.undoStack.length === 0) {
+                    return callback(new Error('되돌릴 작업이 없습니다.'));
+                }
+
+                var lastChange = transaction.undoStack.pop();
+                transaction.redoStack.push(lastChange);
+
+                var originalFeature = transaction.originalFeatures[lastChange.feature.id];
+                if (originalFeature) {
+                    var transactionXML = createWFSTransaction('update', originalFeature);
+                    sendWFSTransaction(transactionXML, function(error, result) {
+                        if (error) return callback(error);
+                        
+                        transaction.pendingChanges = transaction.pendingChanges.filter(function(change) {
+                            return change.timestamp !== lastChange.timestamp;
+                        });
+                        
+                        updateUIState();
+                        callback(null, true);
+                    });
+                }
+            },
+
+            redo: function(callback) {
+                var self = this;
+                if (this.redoStack.length === 0) {
+                    console.log('다시 실행할 작업이 없습니다.');
+                    return callback(new Error('다시 실행할 작업이 없습니다.'));
+                }
+
+                var nextChange = this.redoStack.pop();
+                // 다시 실행한 작업을 undo 스택에 저장
+                this.undoStack.push(nextChange);
+
+                var transactionXML = createWFSTransaction(nextChange.operation, nextChange.feature);
+                sendWFSTransaction(transactionXML, function(error, result) {
+                    if (error) {
+                        return callback(error);
+                    }
+                    
+                    // pendingChanges에 작업 다시 추가
+                    self.pendingChanges.push(nextChange);
+                    callback(null, true);
+                });
+            },
+
+            saveChanges: function(callback) {
+                var self = this;
+                var completed = 0;
+                var hasError = false;
+
+                if (this.pendingChanges.length === 0) {
+                    return callback(null, true);
+                }
+
+                this.pendingChanges.forEach(function(change) {
+                    var transactionXML = createWFSTransaction(change.operation, change.feature);
+                    sendWFSTransaction(transactionXML, function(error) {
+                        if (hasError) return;
+                        
+                        if (error) {
+                            hasError = true;
+                            return callback(error);
+                        }
+                        
+                        completed++;
+                        if (completed === self.pendingChanges.length) {
+                            self.clearChanges();
+                            callback(null, true);
+                        }
+                    });
+                });
+            },
+            
+            discardChanges: function(callback) {
+                var self = this;
+                var completed = 0;
+                var hasError = false;
+
+                var featureIds = Object.keys(this.originalFeatures);
+                if (featureIds.length === 0) {
+                    return callback(null, true);
+                }
+
+                featureIds.forEach(function(featureId) {
+                    var originalFeature = self.originalFeatures[featureId];
+                    var transactionXML = createWFSTransaction('update', originalFeature);
+                    
+                    sendWFSTransaction(transactionXML, function(error) {
+                        if (hasError) return;
+                        
+                        if (error) {
+                            hasError = true;
+                            return callback(error);
+                        }
+                        
+                        completed++;
+                        if (completed === featureIds.length) {
+                            self.clearChanges();
+                            callback(null, true);
+                        }
+                    });
+                });
+            },
+            
+            clearChanges: function() {
+                this.pendingChanges = [];
+                this.originalFeatures = {};
+                this.undoStack = [];
+                this.redoStack = [];
+            },
+
+            // 상태 확인 메서드들
+            hasPendingChanges: function() {
+                return this.pendingChanges.length > 0;
+            },
+
+            canUndo: function() {
+                return this.undoStack.length > 0;
+            },
+
+            canRedo: function() {
+                return this.redoStack.length > 0;
+            }
+        };
+    }
+
+    /**
+     * WFS 트랜잭션 XML 생성
+     */
+    function createWFSTransaction(operation, feature) {
+    	var xml = [
+            '<wfs:Transaction service="WFS" version="' + geoServerConfig.version + '"',
+            'xmlns:wfs="http://www.opengis.net/wfs"',
+            'xmlns:gml="http://www.opengis.net/gml"',
+            'xmlns:' + geoServerConfig.workspace + '="' + geoServerConfig.url + '/' + geoServerConfig.workspace + '">',
+        ].join(' ');
+
+        switch(operation) {
+            case 'insert':
+                xml += createInsertXML(feature);
+                break;
+            case 'update':
+                xml += createUpdateXML(feature);
+                break;
+            case 'delete':
+                xml += createDeleteXML(feature);
+                break;
+        }
+
+        xml += '</wfs:Transaction>';
+        return xml;
+    }
+
+    /**
+     * WFS 트랜잭션 전송
+     */
+    function sendWFSTransaction(transactionXML, callback) {
+    	var xhr = new XMLHttpRequest();
+        xhr.open('POST', geoServerConfig.url, true);
+        xhr.setRequestHeader('Content-Type', 'text/xml');
+        
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    callback(null, xhr.responseText);
+                } else {
+                    callback(new Error('Failed to send transaction: ' + xhr.status));
+                }
+            }
+        };
+        
+        xhr.send(transactionXML);
+    }
+
+    /**
+     * UI 상태 업데이트
+     */
+    function updateUIState() {
+        const elements = getElements('toolbar');
+        const hasPendingChanges = transaction.pendingChanges.length > 0;
+        const canUndo = transaction.undoStack.length > 0;
+        const canRedo = transaction.redoStack.length > 0;
+
+        if (elements.saveBtn) elements.saveBtn.disabled = !hasPendingChanges;
+        if (elements.discardBtn) elements.discardBtn.disabled = !hasPendingChanges;
+        if (elements.undoBtn) elements.undoBtn.disabled = !canUndo;
+        if (elements.redoBtn) elements.redoBtn.disabled = !canRedo;
+    }
+
+/* =====================================================
+    Event Handlers
+======================================================*/
+    /**
+     * 편집 도구 이벤트 핸들러
+     */
+    function handleEditAction(action, button) {
+        if (activeToolbarButton && activeToolbarButton !== button) {
+            activeToolbarButton.classList.remove('active');
+        }
+
+        switch(action) {
+            case 'save': handleSave(); break;
+            case 'discard': handleDiscard(); break;
+            case 'undo': handleUndo(); break;
+            case 'redo': handleRedo(); break;
+            // 다른 편집 액션들 추가
+        }
+    }
+
+    function handleSave() {
+        if (!transaction.pendingChanges.length) {
+            _GL.COMMON.showToast('저장할 변경사항이 없습니다.', 'warning');
+            return;
+        }
+
+        transaction.manager.saveChanges(function(error, result) {
+            if (error) {
+                _GL.COMMON.showToast('저장 중 오류가 발생했습니다: ' + error.message, 'error');
+                return;
+            }
+            _GL.COMMON.showToast('변경사항이 성공적으로 저장되었습니다.', 'success');
+            updateUIState();
+        });
+    }
+
+    // ... (handleDiscard, handleUndo, handleRedo 등 다른 핸들러 구현)
+
+/* =====================================================
+    Event Listeners
+======================================================*/
+    function initializeEventListeners() {
+        // 편집 툴바 버튼 이벤트
+        document.querySelectorAll('.edit-toolbar .btn[data-action]').forEach(function(button) {
+            button.addEventListener('click', function() {
+                handleEditAction(this.getAttribute('data-action'), this);
+            });
+        });
+
+        // 다른 이벤트 리스너들 추가
+    }
+
+    // public API
+    return {
+        init: function() {
+            if (initialized) return;
+            
+            initializeSources();
+            initializeTransactionManager();
+            initializeEventListeners();
+            
+            initialized = true;
+        },
+        getSource: function() {
+            return sources.edit;
+        },
+        addChange: function(operation, feature) {
+            transaction.manager.addChange(operation, feature);
+        }
+    };
+})();
+
+// DOM 로드 완료 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    _GL.MAP_EDIT.init();
+});

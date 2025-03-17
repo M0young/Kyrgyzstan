@@ -1,0 +1,67 @@
+package egovframework.common.utils;
+
+import org.apache.ibatis.executor.statement.StatementHandler;
+import org.apache.ibatis.plugin.*;
+import org.apache.ibatis.reflection.MetaObject;
+import org.apache.ibatis.reflection.SystemMetaObject;
+
+import java.sql.Connection;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Properties;
+
+@Intercepts({
+    @Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})
+})
+public class SecureQueryFilter implements Interceptor {
+	private static final List<String> APPLY_TYPES = Arrays.asList("SELECT", "UPDATE");
+	private static final List<String> TARGET_TABLES = Arrays.asList("KLUMS.\"USER\"");
+	
+	@Override
+	public Object intercept(Invocation invocation) throws Throwable {
+	    StatementHandler handler = (StatementHandler) invocation.getTarget();
+	    MetaObject metaObject = SystemMetaObject.forObject(handler);
+	    
+	    String sql = handler.getBoundSql().getSql();
+	    String upperSql = sql.trim().toUpperCase();
+	    
+	    if (APPLY_TYPES.stream().anyMatch(upperSql::startsWith)
+	    	&& TARGET_TABLES.stream().anyMatch(upperSql::contains)) { 
+	        sql = addDeleteYnCondition(sql);
+	        metaObject.setValue("delegate.boundSql.sql", sql);
+	    }
+	    
+	    return invocation.proceed();
+	}
+    
+    private String addDeleteYnCondition(String sql) {
+        String upperSql = sql.toUpperCase();
+        String condition = " AND del_yn = 'N'";
+        
+        // 이미 del_yn 조건이 있는지 확인
+        if (upperSql.contains("DEL_YN")) {
+            return sql;
+        }
+        
+        // WHERE 절 존재 여부에 따라 조건 추가
+        if (upperSql.contains("WHERE")) {
+            return sql + condition;
+        }
+        
+        // GROUP BY가 있는 경우
+        if (upperSql.contains("GROUP BY")) {
+            return sql.replaceFirst("(?i)GROUP BY", "WHERE del_yn = 'N' GROUP BY");
+        }
+        
+        return sql + " WHERE del_yn = 'N'";
+    }
+
+    @Override
+    public Object plugin(Object target) {
+        return Plugin.wrap(target, this);
+    }
+
+    @Override
+    public void setProperties(Properties properties) {
+    }
+}

@@ -1,0 +1,249 @@
+@charset "UTF-8";
+
+/* =====================================================
+   Sidebar - main
+====================================================== */
+/* 사이드바 기본*/
+#sidebar-admin.navbar-vertical.navbar-expand-lg {
+    width: 20rem;
+    top: 56px;
+}
+
+/* =====================================================
+   Sidebar - item
+====================================================== */
+/* 디자인 수정*/
+#sidebar-admin .nav-item {
+    padding: 8px 12px;
+}
+
+/* =====================================================
+   Sidebar - link
+====================================================== */
+/* 링크 동작 처리 */
+#sidebar-admin .nav-link {
+    transition: all 0.4s ease-out;
+}
+
+/* 사이드바 활성 링크*/
+#sidebar-admin.navbar-vertical .nav-link.active {
+  background-color: rgba(var(--tblr-emphasis-color-rgb), 0.05);
+  color: var(--tblr-primary);
+  font-weight: 500;
+}
+
+/* 사이드바 마우스 오버 활성 링크*/
+#sidebar-admin.navbar-vertical .nav-link:hover {
+    background-color: rgba(var(--tblr-emphasis-color-rgb), 0.075);
+    transform: translateY(-1px);
+}
+
+/* 사이드바 내부 활성 링크의 아이콘 */
+#sidebar-admin .nav-link.active .nav-link-icon{
+    color: var(--tblr-primary);
+}
+
+
+
+
+
+
+
+/* =====================================================
+   page - main
+====================================================== */
+/* 사이드바에 맞춰 margin 수정 */
+.page-admin .navbar-expand-lg.navbar-vertical~.page-wrapper {
+	margin-left: 20rem;	
+}
+
+/* =====================================================
+   page - title
+====================================================== */
+/* page title style */
+.page-admin .page-title{
+	font-size: 25px;
+	font-weight: 700;
+	color: inherit;
+	text-align: left;
+	text-transform: uppercase;
+	position: relative;
+	align-items: center;
+}
+
+/* page title 아이콘 추가 */
+.page-admin .page-title::before {
+  content: "▶︎"; 
+  margin-right: 10px;
+  font-size: 20px;
+}
+
+/* =====================================================
+   page - header
+====================================================== */
+/* page header style */
+.page-admin .page-header .container-xl {
+	margin: 0px;
+	padding-left: 75px;
+	max-width: 1600px;
+}
+
+/* =====================================================
+   page - body
+====================================================== */
+/* page body style */
+.page-admin .page-body .container-xl {
+	margin: 0px;
+	padding-left: 75px;
+	padding-right: 75px;
+	max-width: 1600px;
+}
+
+
+
+
+
+
+
+
+
+/* =====================================================
+   card - main
+====================================================== */
+/* card 전체 스타일 */
+.page-admin .card {
+	display: flex;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	flex-direction: column;
+	height: 675px;
+}
+
+/* =====================================================
+   card - header
+====================================================== */
+/* card-header 스타일 */
+.page-admin .card-header {
+	padding-top: 10px;
+	padding-bottom: 10px;
+	padding-left: 10px;
+	flex: 0 0 auto;
+	background-color: var(--tblr-card-cap-bg);
+}
+
+/* 검색창 스타일 */
+.page-admin .card-header .input-group {
+	width: 300px;
+}
+
+/* 검색 이모지 스타일 */
+.page-admin .card-header .btn .icon {
+	margin-left: 4px;
+	margin-right: 4px;
+}
+
+/* =====================================================
+   card - body
+====================================================== */
+/* card-body 테이블 분리 */
+.page-admin .card-body {
+	margin: 10px;
+	flex: 1 1 auto;
+	overflow-y: auto; 
+}
+
+/* =====================================================
+   card - footer
+====================================================== */
+/* card-footer 스타일 */
+.page-admin .card-footer {
+	padding-top: 5px;
+	padding-bottom: 5px;
+	flex: 0 0 auto;
+}
+
+/* pagination */
+.page-admin .pagination {
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* pagination 내 SVG 아이콘 스타일 */
+.page-admin .pagination .page-link svg {
+  width: 20px; 
+  height: 18px;
+  margin: 0;
+}
+
+
+
+
+/* =====================================================
+   table
+====================================================== */
+/* table text 가운데 정렬 */
+.page-admin .table th,
+.page-admin .table td {
+	text-align: center;
+}
+
+
+
+
+
+
+/* =====================================================
+   modal - edit
+====================================================== */
+/* modal 기본 스타일 */
+#edit-modal-report .modal-content {
+	width: 70%;
+	margin: auto;
+	transform: translate(10px, 10px);
+}
+
+/* modal 버튼 위치 */
+#edit-modal-report .modal-footer .btn-secondary {
+	position: absolute;
+	left: 111px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

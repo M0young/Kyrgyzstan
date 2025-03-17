@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="progressDAO">
+
+    <insert id="insertProgress" parameterType="ProgressVO">
+        insert into klums.uld_prgrs (
+            prgrs_id,
+            user_no,
+            prgrs,
+            tnocs_rcd,
+            cmptn_rcd,
+            cmptn_yn,
+            err,
+            reg_dt,
+            cmptn_dt,
+            file_nm,
+            stts
+        ) values (
+            #{prgrs_id},
+            #{user_no},
+            #{prgrs},
+            #{tnocs_rcd},
+            #{cmptn_rcd},
+            #{cmptn_yn},
+            #{err},
+            current_timestamp,
+            current_timestamp,
+            #{file_nm},
+            #{stts}
+        )
+    </insert>
+
+    <update id="updateProgress" parameterType="ProgressVO">
+        update klums.uld_prgrs
+        set 
+            prgrs = #{prgrs},
+            cmptn_rcd = #{cmptn_rcd},
+            cmptn_yn = #{cmptn_yn},
+            err = #{err},
+            cmptn_dt = current_timestamp,
+            stts = #{stts}
+        <if test="tnocs_rcd != null">
+            , tnocs_rcd = #{tnocs_rcd}
+        </if>
+        where prgrs_id = #{prgrs_id}
+    </update>
+
+    <select id="selectProgress" parameterType="string" resultType="ProgressVO">
+        select 
+            prgrs_id,
+            user_no,
+            prgrs,
+            tnocs_rcd,
+            cmptn_rcd,
+            cmptn_yn,
+            err,
+            to_char(reg_dt, 'yyyy-mm-dd hh24:mi:ss') as reg_dt,
+            to_char(cmptn_dt, 'yyyy-mm-dd hh24:mi:ss') as cmptn_dt,
+            file_nm,
+            stts
+        from klums.uld_prgrs
+        where prgrs_id = #{prgrs_id}
+    </select>
+
+    <select id="selectProgressList" parameterType="string" resultType="ProgressVO">
+        select 
+            prgrs_id,
+            user_no,
+            prgrs,
+            tnocs_rcd,
+            cmptn_rcd,
+            cmptn_yn,
+            err,
+            to_char(reg_dt, 'yyyy-mm-dd hh24:mi:ss') as reg_dt,
+            to_char(cmptn_dt, 'yyyy-mm-dd hh24:mi:ss') as cmptn_dt,
+            file_nm,
+            stts
+        from klums.uld_prgrs
+        where user_no = #{user_no}
+        order by reg_dt desc
+    </select>
+
+    <delete id="deleteOldProgress" parameterType="string">
+        <![CDATA[
+        delete from klums.uld_prgrs
+        where cmptn_yn = true
+        and reg_dt < to_date(#{date}, 'yyyy-mm-dd')
+        ]]>
+    </delete>
+    
+</mapper>

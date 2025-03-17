@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="shapefileDAO">
+   <!-- 테이블 생성 -->
+   <update id="createShapefileTable" parameterType="map">
+       CREATE TABLE IF NOT EXISTS data.${mapType} (
+           ink varchar(20),
+           coate_raio varchar(50),
+           name_raion varchar(50),
+           coate_aa varchar(50),
+           name_aa varchar(50),
+           nomer_kont varchar(50),
+           staryi_nom varchar(50),
+           vid_ugodii varchar(50),
+           uslcode char(20),
+           ispolzovan char(1),
+           opisanie varchar(200),
+           primechani varchar(200), 
+           kategoria_ char(10),
+           kolichestv varchar(50),
+           lclsf_cd int,
+           sclsf_cd int,
+           cnt varchar(50),
+           kdar varchar(50),
+           geom public.geometry(Geometry, ${coord}),
+           CONSTRAINT ${mapType}_pk PRIMARY KEY (ink),
+           CONSTRAINT ${mapType}_fk1 FOREIGN KEY (uslcode) REFERENCES klums.land_type(type_cd),
+           CONSTRAINT ${mapType}_fk2 FOREIGN KEY (kategoria_) REFERENCES klums.land_fund(fund_cd)
+       )
+   </update>
+
+   <!-- 데이터 삽입 -->
+   <insert id="insertShapefileData" parameterType="map">
+       INSERT INTO data.${mapType}
+       (
+           "ink", "coate_raio", "name_raion", "coate_aa", "name_aa", 
+           "nomer_kont", "staryi_nom", "vid_ugodii", "uslcode", "ispolzovan", 
+           "opisanie", "primechani", "kategoria_", "kolichestv", "lclsf_cd", 
+           "sclsf_cd", "cnt", "kdar", "geom"
+       )
+       VALUES 
+       (
+           #{layer.ink}, #{layer.coate_raio}, #{layer.name_raion}, #{layer.coate_aa}, #{layer.name_aa}, 
+           #{layer.nomer_kont}, #{layer.staryi_nom}, #{layer.vid_ugodii}, #{layer.uslcode}, #{layer.ispolzovan}, 
+           #{layer.opisanie}, #{layer.primechani}, #{layer.kategoria_}, #{layer.kolichestv}, #{layer.lclsf_cd}, 
+           #{layer.sclsf_cd}, #{layer.cnt}, #{layer.kdar}, ST_GeomFromText(#{layer.geom}, #{coord})
+       )
+       ON CONFLICT ("ink") DO NOTHING
+   </insert>
+
+	<!-- 토지 이용 유형 코드 조회 -->
+   <select id="selectLandUseTypeCode" parameterType="ShapefileDTO" resultType="ShapefileDTO">
+       SELECT lclsf_cd, sclsf_cd FROM klums.land_sclsf
+       WHERE fld_nm = #{fld_nm}
+   </select>
+   
+   <!-- 테이블을 백업으로 복사 -->
+   <update id="copyTableToBackup" parameterType="map">
+       CREATE TABLE backup.${backupTableName} AS 
+       SELECT * FROM data.${mapType};
+       ALTER TABLE backup.${backupTableName} ADD CONSTRAINT ${backupTableName}_pk PRIMARY KEY (ink);
+       ALTER TABLE backup.${backupTableName} ADD CONSTRAINT ${backupTableName}_fk1 FOREIGN KEY (uslcode) REFERENCES klums.land_type(type_cd);
+       ALTER TABLE backup.${backupTableName} ADD CONSTRAINT ${backupTableName}_fk2 FOREIGN KEY (kategoria_) REFERENCES klums.land_fund(fund_cd);
+   </update>
+
+   <!-- 테이블을 백업으로 이동 -->
+   <update id="moveTableToBackup" parameterType="map">
+	   ALTER TABLE data.${mapType} DROP CONSTRAINT IF EXISTS ${mapType}_pk;
+	   ALTER TABLE data.${mapType} DROP CONSTRAINT IF EXISTS ${mapType}_fk1;
+	   ALTER TABLE data.${mapType} DROP CONSTRAINT IF EXISTS ${mapType}_fk2;
+	   ALTER TABLE data.${mapType} ADD CONSTRAINT ${backupTableName}_pk PRIMARY KEY (ink);
+	   ALTER TABLE data.${mapType} ADD CONSTRAINT ${backupTableName}_fk1 FOREIGN KEY (uslcode) REFERENCES klums.land_type(type_cd);
+	   ALTER TABLE data.${mapType} ADD CONSTRAINT ${backupTableName}_fk2 FOREIGN KEY (kategoria_) REFERENCES klums.land_fund(fund_cd);
+	   ALTER TABLE data.${mapType} SET SCHEMA backup;
+	   ALTER TABLE backup.${mapType} RENAME TO ${backupTableName};
+	</update>
+
+   <!-- 테이블 존재 여부 확인 -->
+   <select id="checkTableExists" parameterType="String" resultType="boolean">
+      SELECT EXISTS (
+          SELECT 1 
+          FROM information_schema.tables 
+          WHERE table_schema = 'data' 
+          AND table_name = #{value}
+      )
+   </select>
+
+   <!-- 레이어의 SRID 조회 -->
+   <select id="selectSridFromExistLayer" parameterType="String" resultType="Integer">
+       SELECT CASE 
+           WHEN EXISTS (SELECT 1 FROM data.${value} LIMIT 1)
+           THEN (SELECT ST_SRID(geom) FROM data.${value} LIMIT 1)
+           ELSE 0
+       END AS srid
+   </select>
+</mapper>

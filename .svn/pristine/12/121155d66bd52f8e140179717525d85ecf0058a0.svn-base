@@ -1,0 +1,52 @@
+package egovframework.main.admin.role.service.impl;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+import egovframework.main.admin.role.service.RoleService;
+import egovframework.main.admin.role.service.RoleVO;
+
+@Service("roleService")
+public class RoleServiceImpl implements RoleService {
+   
+   @Resource(name = "roleDAO")
+   private RoleDAO roleDAO;
+   
+   @Override
+   public List<RoleVO> selectGroupAuthryList(String groupNo) {
+       return roleDAO.selectGroupAuthryList(groupNo);
+   }
+   
+   @Override
+   public RoleVO selectAuthryInfo(String roleCode) {
+       return roleDAO.selectAuthryInfo(roleCode);
+   }
+   
+   @Override
+   public void insertGroupAuthry(RoleVO roleVO) {
+       roleDAO.insertGroupAuthry(roleVO);
+   }
+   
+   @Override
+   public void updateGroupAuthry(RoleVO roleVO) {
+       roleDAO.updateGroupAuthry(roleVO);
+   }
+   
+   @Override
+   public void deleteGroupAuthry(RoleVO roleVO) {
+       roleDAO.deleteGroupAuthry(roleVO);
+   }
+   
+   @Override
+   public void deleteAllGroupAuthry(String groupNo) {
+       roleDAO.deleteAllGroupAuthry(groupNo);
+   }
+   
+   @Override
+   public boolean hasAuthry(String groupNo, String roleCode) {
+       return roleDAO.hasAuthry(groupNo, roleCode);
+   }
+   
+}

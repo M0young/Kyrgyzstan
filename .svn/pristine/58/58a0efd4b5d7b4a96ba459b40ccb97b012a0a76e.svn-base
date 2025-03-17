@@ -1,0 +1,87 @@
+package egovframework.common.uriMapper;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class UriMapper {
+	@GetMapping("/")
+	public String root() {
+		return "redirect:/dashboard";
+	}
+	
+	@GetMapping("/sign-in")
+	public String signIn() {
+		return "/main/user/sign-in";
+	}
+	
+	@GetMapping("/sign-up")
+	public String signUp() {
+		return "/main/user/sign-up";
+	}
+	
+	@GetMapping("/forgot-password")
+	public String forgotPassword() {
+		return "/main/user/forgot-password";
+	}
+	
+	@GetMapping("/dashboard")
+	public String dashboard() {
+		return "/main/dashboard/dashboard";
+	}
+	
+	@GetMapping("/map")
+	public String map() {
+		return "/main/map/map";
+	}
+	
+	@GetMapping("/admin")
+	public String admin() {
+		return "/main/admin/userManager/admin";
+	}
+	
+	@GetMapping("/roleManager")
+	public String roleManager() {
+		return "/main/admin/roleManager/roleManager";
+	}
+	
+	@GetMapping("/visit")
+	public String visit() {
+		return "/main/admin/history/visit";
+	}
+	
+	@GetMapping("/user-log")
+	public String userLog() {
+		return "/main/admin/history/user-log";
+	}
+	
+	@GetMapping("/data-upload")
+	public String dataUpload() {
+		return "/main/admin/history/data-upload";
+	}
+	
+	@GetMapping("/land-type")
+	public String landType() {
+		return "/main/admin/codeManager/land-type";
+	}
+	
+	@GetMapping("/land-symbols")
+	public String landSymbols() {
+		return "/main/admin/codeManager/land-symbols";
+	}
+	
+	@GetMapping("/land-subclassification")
+	public String landSubclassification() {
+		return "/main/admin/codeManager/land-subclassification";
+	}
+	
+	@GetMapping("/land-mapping")
+	public String landMapping() {
+		return "/main/admin/codeManager/land-mapping";
+	}
+	
+	@GetMapping("/land-classification")
+	public String landClassification() {
+		return "/main/admin/codeManager/land-classification";
+	}
+}

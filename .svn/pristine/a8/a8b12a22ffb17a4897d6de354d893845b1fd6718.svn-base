@@ -1,0 +1,1401 @@
+/*========================================================
+    DATE: 2024. 01
+    AUTHOR: MOYOUNG
+    DESC: Map Module
+========================================================*/
+_GL.MAP = (function() {
+    'use strict';
+
+    let initialized = false;
+    let instance = null;
+    let activeToolbarButton = null;
+    let sideControl = null;
+    
+    const sources = {
+        vector: null,
+        marker: null
+    };
+    const layers = {
+        base: {},
+        admin: {},
+        image: {},
+        special: {}
+    };
+    const measure = {
+        sketch: null,
+        draw: null,
+        helpTooltipElement: null,
+        helpTooltip: null,
+        measureTooltipElement: null,
+        measureTooltip: null
+    };
+        
+    /**
+     * DOM 요소 가져오기
+     */
+    function getElements(type, subType) {
+        switch(type) {
+            case 'map':
+                return {
+                    map: document.getElementById('map'),
+                    mapPopup: document.getElementById('mapPopup')
+                };
+            case 'sidebar':
+                return {
+                    sidebar: document.getElementById('sidebar'),
+                    toggleBtn: document.getElementById('sidebarToggle')
+                };
+            case 'layers':
+                switch(subType) {
+                    case 'sliders':
+                        return {
+                            basemap: document.getElementById('basemapSlider'),
+                            satellite: document.getElementById('satelliteSlider'),
+                            orthophoto: document.getElementById('orthophotoSlider'),
+                            province: document.getElementById('provinceSlider'),
+                            district: document.getElementById('districtSlider'),
+                            community: document.getElementById('communitySlider'),
+                            land: document.getElementById('landuseSlider'),
+                            land_bsc: document.getElementById('landuseBscSlider'),
+                            land_plan: document.getElementById('landusePlanSlider')
+                        };
+                    case 'landuse':
+                        return {
+	                    	accordion: document.getElementById('landuseAccordion'),
+	                    	layer: document.getElementsByName('landuseLayer'),
+	                    	dataLayer: document.querySelectorAll('[data-layer]'),
+	                    	classType: document.getElementsByName('classType'),
+	                        checkedClassType: document.querySelector('input[name="classType"]:checked'),
+                            expandAllBtn: document.getElementById('expandAllBtn'),
+                            selectAllBtn: document.getElementById('selectAllBtn')
+                        };
+                }
+        }
+    }
+
+    /**
+     * 기본 소스 초기화
+     */
+    function initializeSources() {
+        sources.vector = new ol.source.Vector();
+        sources.marker = new ol.source.Vector();
+    }
+
+    /**
+     * 기본 레이어 생성
+     */
+    function createBaseLayer(url, id, visible) {
+        return new ol.layer.Tile({
+            source: new ol.source.XYZ({
+                url: url,
+                crossOrigin: 'anonymous'
+            }),
+            id: id,
+            visible: visible || false
+        });
+    }
+
+    /**
+     * WMS 레이어 생성
+     */
+    function createWMSLayer(url, params, id) {
+    	const currentLang = _GL.COMMON.getCurrentLanguage();
+    	
+        return new ol.layer.Tile({
+            source: new ol.source.TileWMS({
+                url: url,
+                params: Object.assign({
+                    'FORMAT': 'image/png',
+                    'VERSION': '1.1.1',
+                    'ENV': `lang=${currentLang}`
+                }, params)
+            }),
+            visible: false,
+            id: id
+        });
+    }
+
+    /**
+     * 벡터 레이어 생성
+     */
+    function createVectorLayer() {
+        return new ol.layer.Vector({
+            id: 'vector',
+            source: sources.vector,
+            zIndex: 1000,
+            style: new ol.style.Style({
+                fill: new ol.style.Fill({
+                    color: 'rgba(255,255,255,0.2)'
+                }),
+                stroke: new ol.style.Stroke({
+                    color: '#ffcc33',
+                    width: 2
+                }),
+                image: new ol.style.Circle({
+                    radius: 7,
+                    fill: new ol.style.Fill({
+                        color: '#ffcc33'
+                    })
+                })
+            })
+        });
+    }
+
+    /**
+     * 마커 레이어 생성
+     */
+    function createMarkerLayer() {
+        return new ol.layer.Vector({
+            source: sources.marker
+        });
+    }
+    
+    /**
+     * 맵 인스턴스 생성
+     */
+    function createMapInstance() {
+        const elements = getElements('map');
+        
+        instance = new ol.Map({
+            target: elements.map,
+            layers: getAllLayers(),
+            view: new ol.View({
+                center: ol.proj.fromLonLat(_GL.MAP_CONFIG.DEFAULT.CENTER),
+                zoom: _GL.MAP_CONFIG.DEFAULT.ZOOM,
+            }),
+            controls: [
+                new ol.control.ScaleLine({ units: 'metric' })
+            ]
+        });
+
+        return instance;
+    }
+    
+    /**
+     * 모든 레이어 초기화 및 생성
+     */
+    function initializeLayers() {
+        // 기본 레이어
+        layers.base = {
+            googleRoad: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.GOOGLE.ROAD, 'google_road'),
+            googleHybrid: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.GOOGLE.HYBRID, 'google_hybrid'),
+            googleSatellite: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.GOOGLE.SATELLITE, 'google_satellite'),
+            osmStandard: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.OSM.STANDARD, 'osm_standard', true),
+            osmStandard2: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.OSM.STANDARD2, 'osm_standard2'),
+            GIS2: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.OSM.GIS2, '2gis'),
+            geology: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.OSM.GEOLOGY, 'geology')
+        };
+
+        // 커튼뷰 레이어
+        layers.curtain = {
+    		googleRoad: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.GOOGLE.ROAD, 'right_google_road'),
+            googleHybrid: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.GOOGLE.HYBRID, 'right_google_hybrid'),
+            googleSatellite: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.GOOGLE.SATELLITE, 'right_google_satellite'),
+            osmStandard: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.OSM.STANDARD, 'right_osm_standard'),
+            osmStandard2: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.OSM.STANDARD2, 'right_osm_standard2'),
+            GIS2: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.OSM.GIS2, 'right_2gis'),
+            geology: createBaseLayer(_GL.MAP_CONFIG.URLS.BASE_MAPS.OSM.GEOLOGY, 'right_geology')	
+        }
+        
+        // 행정구역 레이어
+        layers.admin = {
+            province: createWMSLayer(_GL.MAP_CONFIG.URLS.WMS.ENDPOINT, {
+                "LAYERS": _GL.MAP_CONFIG.URLS.WMS.LAYERS.PROVINCE,
+            }, 'province'),
+            district: createWMSLayer(_GL.MAP_CONFIG.URLS.WMS.ENDPOINT, {
+                "LAYERS": _GL.MAP_CONFIG.URLS.WMS.LAYERS.DISTRICT
+            }, 'district'),
+            community: createWMSLayer(_GL.MAP_CONFIG.URLS.WMS.ENDPOINT, {
+                "LAYERS": _GL.MAP_CONFIG.URLS.WMS.LAYERS.COMMUNITY
+            }, 'community')
+        };
+
+        // 영상 레이어
+        layers.image = {
+    		satellite: createWMSLayer(_GL.MAP_CONFIG.URLS.WMS.ENDPOINT, {
+    			"LAYERS": _GL.MAP_CONFIG.URLS.WMS.LAYERS.SATELLITE
+    		}, 'satellite'),
+            orthophoto: createWMSLayer(_GL.MAP_CONFIG.URLS.WMS.ENDPOINT, {
+                "LAYERS": _GL.MAP_CONFIG.URLS.WMS.LAYERS.AERIAL
+            }, 'orthophoto')
+        };
+        
+        // 토지이용도 레이어
+        layers.landuse = {
+            land: createWMSLayer(_GL.MAP_CONFIG.URLS.WMS.ENDPOINT, {
+                "LAYERS": _GL.MAP_CONFIG.URLS.WMS.LAYERS.LAND
+            }, 'land'),
+            land_bsc: createWMSLayer(_GL.MAP_CONFIG.URLS.WMS.ENDPOINT, {
+                "LAYERS": _GL.MAP_CONFIG.URLS.WMS.LAYERS.LAND_BSC
+            }, 'land_bsc'),
+            land_plan: createWMSLayer(_GL.MAP_CONFIG.URLS.WMS.ENDPOINT, {
+                "LAYERS": _GL.MAP_CONFIG.URLS.WMS.LAYERS.LAND_PLAN
+            }, 'land_plan')
+        };
+    }
+
+    /**
+     * 모든 레이어 가져오기
+     */
+    function getAllLayers() {
+        return [].concat(
+            Object.values(layers.base),
+            Object.values(layers.curtain),
+            Object.values(layers.admin),
+            Object.values(layers.image),
+            Object.values(layers.landuse),
+            [createVectorLayer()],
+            [createMarkerLayer()]
+        );
+    }
+    
+    /**
+     * ID로 레이어 찾기
+     */
+    function findLayerById(id) {
+        return instance.getLayers().getArray().find(layer => layer.get('id') === id);
+    }
+    
+    /**
+     * 레이어 가시성 설정
+     */
+    function setLayerVisibility(id, isVisible) {
+        const layer = findLayerById(id);
+        if (layer) layer.setVisible(isVisible);
+    }
+    
+    /**
+     * 지도 캡쳐 초기화
+     */
+    function initializeMapCapture() {
+        _GL.COMMON.captureUtil.captureMap = function(callback) {
+        	instance.once('rendercomplete', function() {
+                try {
+                    const mapCanvas = document.createElement('canvas');
+                    const size = instance.getSize();
+                    mapCanvas.width = size[0];
+                    mapCanvas.height = size[1];
+                    const mapContext = mapCanvas.getContext('2d');
+
+                    Array.prototype.forEach.call(document.querySelectorAll('.ol-layer canvas'), function(canvas) {
+                        if (canvas.width > 0) {
+                            const opacity = canvas.parentNode.style.opacity;
+                            mapContext.globalAlpha = opacity === '' ? 1 : Number(opacity);
+                            const transform = canvas.style.transform;
+                            
+                            const matrix = transform
+                                .match(/^matrix\(([^\(]*)\)$/)[1]
+                                .split(',')
+                                .map(Number);
+                                
+                            CanvasRenderingContext2D.prototype.setTransform.apply(
+                                mapContext,
+                                matrix
+                            );
+                            mapContext.drawImage(canvas, 0, 0);
+                        }
+                    });
+
+                    callback(null, mapCanvas.toDataURL());
+                } catch (error) {
+                    callback(error);
+                    _GL.COMMON.showToast('Screenshot failed', 'error');
+                }
+            });
+            instance.renderSync();
+        };
+    }
+    
+    /**
+     * UI 컴포넌트 초기화
+     */
+    function initializeUIComponents() {
+        const elements = getElements('map');
+        
+        instance.addOverlay(new ol.Overlay({
+            element: elements.mapPopup,
+            id: "mapPopup",
+            offset: [0, -105]
+        }));
+        
+        instance.on('loadstart', function() {
+            instance.getTargetElement().classList.add('spinner');
+        });
+        
+        instance.on('loadend', function() {
+            if (!instance.getLayers().getArray().some(function(layer) {
+                return layer.getSource().loading;
+            })) {
+                instance.getTargetElement().classList.remove('spinner');
+            }
+        });
+    }
+
+    function initializeMapClickEvent() {
+        instance.on('singleclick', function(evt) {
+            const coordinate = evt.coordinate;
+            const landuseLayerIds = ['land', 'land_bsc', 'land_plan'];
+            const featurePromises = [];
+            console.log(coordinate)
+            landuseLayerIds.forEach(layerId => {
+                const layer = findLayerById(layerId);
+                if (layer && layer.getVisible()) {
+                    const source = layer.getSource();
+                    console.log(source)
+                    if (source instanceof ol.source.TileWMS) {
+                        const viewResolution = instance.getView().getResolution();
+                        console.log(viewResolution)
+                        const url = source.getFeatureInfoUrl(
+                            coordinate, 
+                            viewResolution, 
+                            instance.getView().getProjection(),
+                            {
+                                'INFO_FORMAT': 'application/json',
+                                'FEATURE_COUNT': 10
+                            }
+                        );
+
+                        if (url) {
+                            featurePromises.push(
+                                fetch(url)
+                                    .then(response => response.json())
+                                    .then(data => ({
+                                        layerName: layerId,
+                                        features: data.features || []
+                                    }))
+                                    .catch(error => {
+                                        console.error(`Error fetching features for ${layerId}:`, error);
+                                        return { layerName: layerId, features: [] };
+                                    })
+                            );
+                        }
+                    }
+                }
+            });
+
+            Promise.all(featurePromises)
+                .then(layerFeatures => {
+                    const nonEmptyLayerFeatures = layerFeatures.filter(layerFeature => 
+                        layerFeature.features.length > 0
+                    );
+
+                    if (nonEmptyLayerFeatures.length > 0) {
+                        displayFeatureInfo(nonEmptyLayerFeatures, coordinate);
+                    } else {
+                        // 피처가 없으면 팝업 숨기기
+                        const popupOverlay = instance.getOverlayById('mapPopup');
+                        popupOverlay.setPosition(undefined);
+                    }
+                });
+        });
+    }
+
+    function initializeDragAndResize(popupElement) {
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        
+        // 헤더 요소에 대한 참조 생성
+        const header = popupElement.querySelector('.map-popup-header');
+        
+        header.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+        function dragStart(e) {
+            initialX = e.clientX - popupElement.offsetLeft;
+            initialY = e.clientY - popupElement.offsetTop;
+
+            if (e.target === header) {
+                isDragging = true;
+            }
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+
+                // 맵 영역 내에서만 이동하도록 제한
+                const mapElement = instance.getTargetElement();
+                const mapRect = mapElement.getBoundingClientRect();
+                const popupRect = popupElement.getBoundingClientRect();
+
+                currentX = Math.max(mapRect.left, Math.min(currentX, mapRect.right - popupRect.width));
+                currentY = Math.max(mapRect.top, Math.min(currentY, mapRect.bottom - popupRect.height));
+
+                popupElement.style.left = currentX + "px";
+                popupElement.style.top = currentY + "px";
+                
+                // OpenLayers Overlay 위치 업데이트 중지
+                const overlay = instance.getOverlayById('mapPopup');
+                overlay.set('preventPositionUpdate', true);
+            }
+        }
+
+        function dragEnd() {
+            isDragging = false;
+        }
+    }
+    
+    function displayFeatureInfo(layerFeatures, coordinate) {
+    	const elements = getElements('map');
+    	elements.mapPopup.innerHTML = `
+            <div class="card">
+                <div class="map-popup-header">
+                    <h3 class="card-title">Feature Info</h3>
+                    <button type="button" class="btn-close" aria-label="Close"></button>
+                </div>
+                <div class="map-popup-content">
+                    <ul class="nav nav-tabs nav-fill" role="tablist"></ul>
+                    <div class="tab-content"></div>
+                </div>
+            </div>
+            <div class="resize-handle"></div>
+        `;
+
+        const tabNav = elements.mapPopup.querySelector('.nav-tabs');
+        const tabContent = elements.mapPopup.querySelector('.tab-content');
+
+        // 탭 내용 생성
+        layerFeatures.forEach((layerFeature, index) => {
+            const tabId = `tab-${layerFeature.layerName}`;
+            
+            // 탭 네비게이션
+            tabNav.innerHTML += `
+                <li class="nav-item">
+                    <a class="nav-link ${index === 0 ? 'active' : ''}" 
+                       data-bs-toggle="tab" 
+                       href="#${tabId}">
+                        ${layerFeature.layerName.toUpperCase()}
+                    </a>
+                </li>
+            `;
+
+            // 탭 콘텐츠
+            const tabPane = document.createElement('div');
+            tabPane.id = tabId;
+            tabPane.className = `tab-pane fade ${index === 0 ? 'show active' : ''}`;
+
+            layerFeature.features.forEach((feature, featureIndex) => {
+                tabPane.innerHTML += createFeatureCard(feature, featureIndex);
+            });
+
+            tabContent.appendChild(tabPane);
+        });
+
+        // 닫기 버튼 이벤트
+        elements.mapPopup.querySelector('.btn-close').addEventListener('click', () => {
+            const overlay = instance.getOverlayById('mapPopup');
+            overlay.setPosition(undefined);
+        });
+
+        // 드래그 기능 초기화
+        initializeDragAndResize(elements.mapPopup);
+        
+        // 팝업 위치 설정
+        const overlay = instance.getOverlayById('mapPopup');
+        if (!overlay.get('preventPositionUpdate')) {
+            overlay.setPosition(coordinate);
+        }
+    }
+
+    function createFeatureCard(feature, index) {
+        return `
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h4 class="card-title">Feature ${index + 1}</h4>
+                </div>
+                <div class="table-responsive">
+                    <table class="table card-table table-vcenter">
+                        <tbody>
+                            ${Object.entries(feature.properties)
+                                .map(([key, value]) => `
+                                    <tr>
+                                        <th class="w-1">${formatKey(key)}</th>
+                                        <td>${formatValue(value)}</td>
+                                    </tr>
+                                `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    function formatKey(key) {
+        return key
+            .replace(/_/g, ' ')
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^./, str => str.toUpperCase());
+    }
+
+    function formatValue(value) {
+        if (value === null || value === undefined) return '-';
+        if (typeof value === 'number') return value.toLocaleString();
+        return value.toString();
+    }
+    
+    /**
+     * 마커 생성
+     */
+    function createMarker(xpos, ypos, text) {
+        const markerStyle = new ol.style.Style({
+            image: new ol.style.Icon({
+                anchor: [0.5, 20],
+                anchorXUnits: 'fraction',
+                anchorYUnits: 'pixels',
+                src: './resources/images/map-point-ico.png'
+            }),
+            text: new ol.style.Text({
+                text: text || '',
+                offsetY: -30,
+                font: '14px Calibri,sans-serif',
+                fill: new ol.style.Fill({color: '#000'}),
+                stroke: new ol.style.Stroke({color: '#fff', width: 3})
+            })
+        });
+
+        const feature = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.fromLonLat([xpos, ypos]))
+        });
+        feature.setStyle(markerStyle);
+
+        sources.marker.clear();
+        sources.marker.addFeature(feature);
+    }
+
+    /**
+     * 사이드바 토글 초기화
+     */
+    function initializeSidebarToggle() {
+    	const elements = getElements('sidebar');
+        
+    	if (elements.toggleBtn && elements.sidebar) {
+            elements.toggleBtn.addEventListener('click', function() {
+                elements.sidebar.classList.toggle('collapsed');
+            });
+        }
+    }
+
+/* =====================================================
+    Main Contents
+======================================================*/
+    /**
+     * 토지이용 분류 데이터 로드
+     */
+    function loadLanduseClassifications(checkedLayer, layerId) {
+        const currentLang = _GL.COMMON.getCurrentLanguage();
+        const elements = getElements('layers', 'landuse');
+        
+        fetch(`/klums/api/layer/classifications?lang=${currentLang}&layerType=${checkedLayer}&classType=${elements.checkedClassType.value}`, {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': _GL.csrf.token
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                updateLanduseAccordion(result.data, checkedLayer, layerId, elements.checkedClassType.value === 'type');
+            } else {
+                throw new Error(result.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching classifications:', error);
+            _GL.COMMON.showToast(error, 'error');
+        });
+    }
+
+    /**
+     * 토지이용 아코디언 메뉴 업데이트
+     */
+    function updateLanduseAccordion(data, checkedLayer, layerId, isLandType) {
+    	const elements = getElements('layers', 'landuse');
+    	const lang = _GL.COMMON.getCurrentLanguage();
+    	const contentId = `${layerId}Content`;
+    	const container = document.querySelector(`#${contentId} .accordion-list`);
+    	container.innerHTML = '';
+	   
+    	const checkedLayers = Array.from(elements.layer)
+    		.filter(layer => layer.checked)
+    		.map(layer => layer.value);
+
+    	// 체크된 레이어들의 컨테이너 표시
+    	elements.dataLayer.forEach(container => {
+    		container.hidden = !checkedLayers.includes(container.dataset.layer);
+    	});
+
+    	if (isLandType) {
+    		// LAND TYPE 단순 리스트 생성
+    		const listGroup = document.createElement('div');
+    		listGroup.className = 'list-group list-group-flush';
+	       
+    		const listItems = data.map(item => {
+    			const label = document.createElement('label');
+    			label.className = 'list-group-item d-flex border-0 py-2';
+    			label.innerHTML = `
+    				<input type="checkbox" class="form-check-input child-checkbox" value="${item.fund_cd}">
+    				<span>${item[`fund_nm_${lang}`]}</span>
+				`;
+    			return label;
+    		});
+	       
+    		listItems.forEach(item => listGroup.appendChild(item));
+	       
+    		const accordionBody = document.createElement('div');
+    		accordionBody.className = 'accordion-body pt-0';
+    		accordionBody.appendChild(listGroup);
+	       
+    		container.appendChild(accordionBody);
+    	} else {
+    		// LAND USE 대분류별로 그룹화
+    		const groupedData = data.reduce((acc, item) => {
+    			const largeName = item[`lclsf_nm_${lang}`];
+    			if (!acc[largeName]) {
+    				acc[largeName] = [];
+    			}
+    			acc[largeName].push({
+    				name: item[`sclsf_nm_${lang}`],
+    				code: item.sclsf_cd
+    			});
+    			return acc;
+    		}, {});
+	       
+    		Object.entries(groupedData).forEach(([largeName, smallClasses], index) => {
+    			const accordionItem = document.createElement('div');
+    			accordionItem.className = 'accordion-item';
+    			const itemId = `${checkedLayer}_${index}`;
+	           
+    			// 대분류 헤더 생성
+    			const header = document.createElement('h2');
+    			header.className = 'accordion-header position-relative';
+    			header.innerHTML = `
+    				<button class="accordion-button d-flex align-items-center" 
+    						type="button" data-bs-toggle="collapse" 
+    						data-bs-target="#${itemId}">
+    					<span class="ms-6">${largeName}</span>
+    				</button>
+    				<input type="checkbox" class="form-check-input parent-checkbox ms-4">
+				`;
+	           
+    			// 소분류 리스트 생성
+    			const listGroup = document.createElement('div');
+    			listGroup.className = 'list-group list-group-flush pt-0';
+	           
+    			const listItems = smallClasses.map(small => {
+    				const label = document.createElement('label');
+    				label.className = 'list-group-item d-flex border-0 py-2';
+    				label.innerHTML = `
+    					<input type="checkbox" class="form-check-input child-checkbox" value="${small.code}">
+    					<span>${small.name}</span>
+					`;
+    				return label;
+    			});
+	           
+    			listItems.forEach(item => listGroup.appendChild(item));
+	           
+    			// 아코디언 바디 생성
+    			const accordionBody = document.createElement('div');
+    			accordionBody.className = 'accordion-body pt-0';
+    			accordionBody.appendChild(listGroup);
+	           
+    			// 아코디언 본문 생성
+    			const accordionCollapse = document.createElement('div');
+    			accordionCollapse.id = itemId;
+    			accordionCollapse.className = `accordion-collapse collapse`;
+    			accordionCollapse.appendChild(accordionBody);
+	           
+    			// 완전한 아코디언 아이템 구성
+    			accordionItem.appendChild(header);
+    			accordionItem.appendChild(accordionCollapse);
+	           
+    			container.appendChild(accordionItem);
+    		});
+    	}
+	}
+    
+    /**
+     * 체크박스 컨트롤 초기화
+     */
+    function initializeCheckboxControls(accordion) {
+        if (!accordion) return;
+
+        // 부모 체크박스 상태 업데이트 함수
+        function updateParentState(childCheckbox) {
+            const accordionItem = childCheckbox.closest('.accordion-item');
+            const childCheckboxes = accordionItem.querySelectorAll('.child-checkbox');
+            const parentCheckbox = accordionItem.querySelector('.parent-checkbox');
+
+            if (parentCheckbox) {
+                const allChecked = Array.from(childCheckboxes).every(checkbox => checkbox.checked);
+                const someChecked = Array.from(childCheckboxes).some(checkbox => checkbox.checked);
+                
+                parentCheckbox.checked = allChecked;
+                parentCheckbox.indeterminate = !allChecked && someChecked;
+            } 
+        }
+
+        // 체크박스 이벤트 위임
+        accordion.addEventListener('change', function(e) {
+            const target = e.target;
+            
+            // 부모 체크박스 이벤트
+            if (target.matches('.parent-checkbox')) {
+                const accordionItem = target.closest('.accordion-item');
+                const childCheckboxes = accordionItem.querySelectorAll('.child-checkbox');
+                
+                childCheckboxes.forEach(checkbox => {
+                    checkbox.checked = target.checked;
+                });
+                
+                updateLayerVisibility();
+            }
+            
+            // 자식 체크박스 이벤트
+            if (target.matches('.child-checkbox')) {
+                updateParentState(target);
+                updateLayerVisibility();
+            }
+        });
+    }
+    
+    /**
+     * 아코디언 스크롤 동기화
+     */
+    function synchronizeAccordionScroll() {
+        const accordionItems = document.querySelectorAll('.landuse-accordion .accordion-body');
+
+        accordionItems.forEach(item => {
+            item.addEventListener('scroll', function() {
+                const scrollTop = this.scrollTop;
+                
+                accordionItems.forEach(otherItem => {
+                    if (otherItem !== item) {
+                        otherItem.scrollTop = scrollTop;
+                    }
+                });
+            });
+        });
+    }
+    
+    /**
+     * Land Use 레이어 가시성 업데이트
+     */
+    function updateLayerVisibility() {
+        const elements = getElements('layers', 'landuse');
+        const checkedBoxes = elements.accordion.querySelectorAll('.child-checkbox:checked');
+        const selectedCodes = Array.from(checkedBoxes).map(checkbox => checkbox.value);
+        const classType = elements.checkedClassType.value;
+
+        // 체크된 모든 레이어에 대해 처리
+        elements.layer.forEach(checkedLayer => {
+            if (checkedLayer.checked) {
+                const landuseLayer = findLayerById(checkedLayer.value);
+                if (landuseLayer) {
+                    if (selectedCodes.length > 0) {
+                        const source = landuseLayer.getSource();
+                        const params = source.getParams();
+                        console.log(classType)
+                        if (classType === 'type') {
+                        	params.STYLES = 'klums:type';
+                            params.CQL_FILTER = `kategoria_ IN (${selectedCodes.join(',')})`;
+                        } else {
+                        	params.STYLES = 'klums:symbol';
+                            params.CQL_FILTER = `sclsf_cd IN (${selectedCodes.join(',')})`;
+                        }
+                        
+                        source.updateParams(params);
+                        landuseLayer.setVisible(true);
+                    } else {
+                        landuseLayer.setVisible(false);
+                    }
+                }
+            }
+        });
+    }
+    
+    /**
+     * classType 변경 시 레이어 가시성 초기화
+     */
+    function resetLanduseState() {
+        const elements = getElements('layers', 'landuse');
+        
+        // 레이어 가시성 초기화
+        elements.layer.forEach(checkedLayer => {
+        	if (checkedLayer.checked) {
+                const landuseLayer = findLayerById(checkedLayer.value);
+                landuseLayer.setVisible(false);
+            }
+        });
+
+        // 체크박스 초기화
+        elements.accordion.querySelectorAll('.form-check-input').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+
+        // 버튼 상태 초기화
+        elements.expandAllBtn.classList.remove('active');
+        elements.selectAllBtn.classList.remove('active');
+    }
+    
+/* =====================================================
+    Toolbar
+======================================================*/
+    /**
+     * 툴바 이벤트 핸들러
+     */
+    function handleToolbarAction(action, button) {
+        if (!['distanceMeasurement', 'areaMeasurement', 'fullscreen'].includes(action) && activeToolbarButton) {
+            activeToolbarButton.classList.remove('active');
+            activeToolbarButton = null;
+            clearMeasurement();
+        }
+
+        switch(action) {
+	        case 'fullscreen': toggleFullscreen(); break;
+	        case 'zoomIn': zoomIn(); break;
+	        case 'zoomOut': zoomOut(); break;
+	        case 'defaultLocation': moveToDefault(); break;
+	        case 'myLocation': moveToMyLocation(); break;
+	        case 'refresh': clearMeasurement(); break;
+	        case 'distanceMeasurement': toggleMeasurementTool(button, 'LineString'); break;
+	        case 'areaMeasurement': toggleMeasurementTool(button, 'Polygon'); break;
+	        case 'curtainView': toggleToolbarMenu(button, 'curtainMenu'); break;
+        }
+    }
+
+    /**
+     * 전체화면 토글
+     */
+    function toggleFullscreen() {
+        const elements = getElements('map');
+        
+        if (!document.fullscreenElement) {
+        	elements.map.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+    
+    /**
+     * 줌 확대
+     */
+    function zoomIn() {
+        instance.getView().setZoom(instance.getView().getZoom() + 1);
+    }
+
+    /**
+     * 줌 축소
+     */
+    function zoomOut() {
+        instance.getView().setZoom(instance.getView().getZoom() - 1);
+    }
+
+    /**
+     * 초기 위치로 이동
+     */
+    function moveToDefault() {
+        instance.getView().animate({
+            center: ol.proj.fromLonLat(_GL.MAP_CONFIG.DEFAULT.CENTER),
+            zoom: _GL.MAP_CONFIG.DEFAULT.ZOOM,
+            duration: 1000
+        });
+    }
+
+    /**
+     * 현재 위치로 이동
+     */
+    function moveToMyLocation() {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                function(info) {
+                    const coords = [info.coords.longitude, info.coords.latitude];
+                    instance.getView().animate({
+                        center: ol.proj.fromLonLat(coords),
+                        zoom: 17,
+                        duration: 1000
+                    });
+                    createMarker(coords[0], coords[1], "My Location");
+                },
+                function() {
+                    _GL.COMMON.showToast('Location information not available.', 'error');
+                }
+            );
+        } else {
+            _GL.COMMON.showToast('This browser does not support location information.', 'error');
+        }
+    }
+
+    /**
+     * 측정 도구 토글
+     */
+    function toggleMeasurementTool(button, type) {
+        if (activeToolbarButton && activeToolbarButton !== button) {
+            activeToolbarButton.classList.remove('active');
+            if (measure.draw) {
+                instance.removeInteraction(measure.draw);
+            }
+        }
+
+        button.classList.toggle('active');
+        if (button.classList.contains('active')) {
+            activeToolbarButton = button;
+            addMeasureInteraction(type);
+        } else {
+            activeToolbarButton = null;
+            if (measure.draw) {
+                instance.removeInteraction(measure.draw);
+            }
+        }
+    }
+    
+    /**
+     * 측정 값 툴팁 생성
+     */
+    function createMeasureTooltip() {
+        if (measure.measureTooltipElement) {
+            measure.measureTooltipElement.parentNode.removeChild(measure.measureTooltipElement);
+        }
+        measure.measureTooltipElement = document.createElement('div');
+        measure.measureTooltipElement.className = 'ol-tooltip ol-tooltip-measure';
+        measure.measureTooltip = new ol.Overlay({
+            element: measure.measureTooltipElement,
+            offset: [0, -15],
+            positioning: 'bottom-center',
+            stopEvent: false,
+            insertFirst: false,
+            id: "MeasureTooltip"
+        });
+        instance.addOverlay(measure.measureTooltip);
+    }
+
+    /**
+     * 측정 도움말 툴팁 생성
+     */
+    function createHelpTooltip() {
+        if (measure.helpTooltipElement) {
+            measure.helpTooltipElement.parentNode.removeChild(measure.helpTooltipElement);
+        }
+        measure.helpTooltipElement = document.createElement('div');
+        measure.helpTooltipElement.className = 'ol-tooltip hidden';
+        measure.helpTooltip = new ol.Overlay({
+            element: measure.helpTooltipElement,
+            offset: [15, 0],
+            positioning: 'center-left',
+            id: "HelpTooltip"
+        });
+        instance.addOverlay(measure.helpTooltip);
+    }
+
+    /**
+     * 측정 도구 상호작용 추가
+     */
+    function addMeasureInteraction(type) {
+        measure.draw = new ol.interaction.Draw({
+            source: sources.vector,
+            type: type,
+            style: new ol.style.Style({
+                fill: new ol.style.Fill({
+                    color: 'rgba(255, 255, 255, 0.2)'
+                }),
+                stroke: new ol.style.Stroke({
+                    color: 'rgba(0, 0, 0, 0.5)',
+                    lineDash: [10, 10],
+                    width: 2
+                }),
+                image: new ol.style.Circle({
+                    radius: 5,
+                    stroke: new ol.style.Stroke({
+                        color: 'rgba(0, 0, 0, 0.7)'
+                    }),
+                    fill: new ol.style.Fill({
+                        color: 'rgba(255, 255, 255, 0.2)'
+                    })
+                })
+            })
+        });
+
+        instance.addInteraction(measure.draw);
+        createMeasureTooltip();
+        createHelpTooltip();
+
+        let listener;
+        measure.draw.on('drawstart', function(evt) {
+            measure.sketch = evt.feature;
+            let tooltipCoord = evt.coordinate;
+
+            listener = measure.sketch.getGeometry().on('change', function(evt) {
+                const geom = evt.target;
+                let output;
+                if (geom instanceof ol.geom.Polygon) {
+                    const area = ol.sphere.getArea(geom);
+                    output = area > 10000 ? 
+                        (Math.round((area / 1000000) * 100) / 100 + ' km<sup>2</sup>') : 
+                        (Math.round(area * 100) / 100 + ' m<sup>2</sup>');
+                    tooltipCoord = geom.getInteriorPoint().getCoordinates();
+                } else if (geom instanceof ol.geom.LineString) {
+                    const length = ol.sphere.getLength(geom);
+                    output = length > 100 ? 
+                        (Math.round((length / 1000) * 100) / 100 + ' km') : 
+                        (Math.round(length * 100) / 100 + ' m');
+                    tooltipCoord = geom.getLastCoordinate();
+                }
+                measure.measureTooltipElement.innerHTML = output;
+                measure.measureTooltip.setPosition(tooltipCoord);
+            });
+        });
+
+        measure.draw.on('drawend', function() {
+            measure.measureTooltipElement.className = 'ol-tooltip ol-tooltip-static';
+            measure.measureTooltip.setOffset([0, -7]);
+            measure.sketch = null;
+            measure.measureTooltipElement = null;
+            createMeasureTooltip();
+            ol.Observable.unByKey(listener);
+        });
+    }
+
+    /**
+     * 측정 데이터 삭제
+     */
+    function clearMeasurement() {
+        if (measure.draw) {
+            instance.removeInteraction(measure.draw);
+        }
+
+        instance.getOverlays().getArray().slice(0).forEach(function(overlay) {
+            if (overlay.getId() === "MeasureTooltip" || overlay.getId() === "HelpTooltip") {
+                instance.removeOverlay(overlay);
+            }
+        });
+
+        if (sources.vector) {
+            sources.vector.clear();
+        }
+
+        measure.sketch = null;
+        measure.draw = null;
+        measure.measureTooltipElement = null;
+        measure.helpTooltipElement = null;
+    }
+    
+    /**
+     * 툴바 메뉴 토글
+     */
+    function toggleToolbarMenu(button, menuId) {
+        const dropdownMenu = document.getElementById(menuId);
+        dropdownMenu.classList.toggle('show');
+
+        // 외부 클릭 시 닫기
+        document.addEventListener('click', function closeToolbarMenu(e) {
+            if (!dropdownMenu.contains(e.target) && !button.contains(e.target)) {
+                dropdownMenu.classList.remove('show');
+                document.removeEventListener('click', closeToolbarMenu);
+            }
+        });
+    }
+    
+    /**
+     * 배경지도 설정
+     */
+    function setBasemap(id) {
+    	const elements = getElements('layers', 'sliders');
+        const baseMapIds = ['osm_standard', 'osm_standard2', 'google_hybrid',
+                            'google_satellite', 'google_road', '2gis', 'geology'];
+        
+        const opacity = elements.basemap && elements.basemap.noUiSlider ? 
+    				elements.basemap.noUiSlider.get() / 100 : 1;
+
+        instance.getLayers().getArray().forEach(function(layer) {
+            const layerId = layer.get('id');
+            if (baseMapIds.includes(layerId)) {
+                layer.setVisible(layerId === id);
+                if (layerId === id) {
+                    layer.setOpacity(opacity);
+                }
+            }
+        });
+    }
+    
+    /**
+     * 커튼뷰 설정
+     */
+    function toggleCurtainView(enabled) {
+        if (enabled) {
+            if (!sideControl) {
+                sideControl = new ol.control.Swipe();
+                instance.addControl(sideControl);
+            }
+            
+            const selectedLayer = document.querySelector('input[name="curtainView"]:checked');
+            if (selectedLayer) {
+                setRightLayer(selectedLayer.value);
+            }
+        } else {
+        	if (sideControl) {
+        		instance.removeControl(sideControl);
+        		sideControl = null;
+        		
+	        	instance.getLayers().getArray().forEach(function(layer) {
+	                const layerId = layer.get('id');
+	                if (layerId.startsWith('right_')) {
+	                    layer.setVisible(false);
+	                }
+	            });
+        	}
+        }
+    }
+
+    /**
+     * 우측 배경지도 설정
+     */
+    function setRightLayer(id) {
+        if (!sideControl) return;
+        
+        const rightLayerIds = ['right_osm_standard', 'right_osm_standard2', 
+                              'right_google_hybrid', 'right_google_satellite', 
+                              'right_google_road', 'right_2gis', 'right_geology'];
+        
+        instance.getLayers().getArray().forEach(function(layer) {
+            const layerId = layer.get('id');
+            if (rightLayerIds.includes(layerId)) {
+                layer.setVisible(layerId === id);
+            }
+        });
+        
+        const rightLayer = findLayerById(id);
+        
+        if (rightLayer) {
+            sideControl.addLayer(rightLayer, true);
+        }
+    }
+
+/* =====================================================
+    Event Listeners
+======================================================*/
+    function initializeEventListeners() {
+    	initializeSidebarToggle();    // 사이드바 이벤트
+    	initializeLayerEvents();      // Layers 관련 이벤트
+        initializeLanduseEvents();    // Land Use 관련 이벤트
+        initializeToolbarEvents();    // 툴바 관련 이벤트
+        initializeMapClickEvent();
+    }
+
+    /**
+     * Layers 관련 이벤트
+     */
+    function initializeLayerEvents() {
+    	const elements = getElements('layers', 'sliders');
+
+    	// 배경지도 변경 이벤트
+    	document.querySelectorAll('#basemap .toolbar-menu-check').forEach(checkbox => {
+    	    checkbox.addEventListener('change', () => {
+    	        setBasemap(checkbox.value);
+    	    });
+    	});
+    	
+        // 래스터 레이어 이벤트
+    	document.querySelectorAll('#rasters .toolbar-menu-check').forEach(checkbox => {
+    	    checkbox.addEventListener('change', () => {
+    	        setLayerVisibility(checkbox.value, checkbox.checked);
+    	    });
+    	});
+
+        // 행정구역 레이어 이벤트
+    	document.querySelectorAll('#borders .toolbar-menu-check').forEach(checkbox => {
+    	    checkbox.addEventListener('change', () => {
+    	        setLayerVisibility(checkbox.value, checkbox.checked);
+    	    });
+    	});
+
+        // 레이어 투명도 슬라이더 초기화 이벤트
+        Object.entries(elements).forEach(([key, element]) => {
+            if (element && window.noUiSlider) {
+                try {
+                    noUiSlider.create(element, {
+                        start: 100,
+                        connect: [true, false],
+                        step: 1,
+                        range: {
+                            min: 0,
+                            max: 100
+                        }
+                    });
+                    element.noUiSlider.on('update', function(values) {
+                        const opacity = values[0] / 100;
+                        
+                        if (key === 'basemap') {
+                            const basemapIds = ['osm_standard', 'osm_standard2', 'google_hybrid',
+                                              'google_satellite', 'google_road', '2gis', 'geology'];
+                            
+                            instance.getLayers().getArray()
+                                .filter(layer => basemapIds.includes(layer.get('id')) && layer.getVisible())
+                                .forEach(layer => layer.setOpacity(opacity));
+                        } else {
+                            const layer = findLayerById(key);
+                            if (layer) {
+                                layer.setOpacity(opacity);
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error(`Failed to initialize slider for ${key}:`, error);
+                }
+            }
+        });
+    }
+
+    /**
+     * Land Use 관련 이벤트
+     */
+    function initializeLanduseEvents() {
+        const elements = getElements('layers', 'landuse');
+        
+        // 체크박스 이벤트 
+        initializeCheckboxControls(elements.accordion);
+        
+        // 스크롤 동기화 이벤트
+        synchronizeAccordionScroll();
+        
+        // Expand All 버튼 이벤트
+        elements.expandAllBtn.addEventListener('click', function() {
+           const collapseElements = elements.accordion.querySelectorAll('.accordion-collapse');
+           this.classList.toggle('active');
+           
+           collapseElements.forEach(element => {
+               const bsCollapse = new bootstrap.Collapse(element, {
+                   toggle: false
+               });
+               this.classList.contains('active') ? bsCollapse.show() : bsCollapse.hide();
+           });
+        });
+
+        // Select All 버튼 이벤트
+        elements.selectAllBtn.addEventListener('click', function() {
+           const allCheckboxes = elements.accordion.querySelectorAll('.form-check-input');
+           this.classList.toggle('active');
+           
+           allCheckboxes.forEach(checkbox => {
+               checkbox.checked = this.classList.contains('active');
+           });
+           
+           updateLayerVisibility();
+        });
+
+        // layer 변경 이벤트
+        elements.layer.forEach(checkbox => {
+        	checkbox.addEventListener('change', function() {
+            	// 현재 체크된 모든 레이어 찾기
+                const checkedLayers = Array.from(elements.layer)
+                    .filter(layer => layer.checked)
+                    .map(layer => layer.value);
+
+                // 체크된 레이어들의 컨테이너 표시/숨김
+                elements.dataLayer.forEach(container => {
+                    container.hidden = !checkedLayers.includes(container.dataset.layer);
+                });
+                
+                if (this.checked) {
+                    const landuseLayer = findLayerById(this.value);
+                    if (landuseLayer) {
+                        loadLanduseClassifications(this.value, this.id);
+                    }
+                } else {
+                    const landuseLayer = findLayerById(this.value);
+                    if (landuseLayer) {
+                        landuseLayer.setVisible(false);
+                    }
+                }
+            });
+        });
+        
+        // classType 변경 이벤트
+        elements.classType.forEach(radio => {
+        	radio.addEventListener('change', function() {
+        		resetLanduseState();
+        		elements.layer.forEach(checkedLayer => {
+        	        if (checkedLayer.checked) {
+        	            const landuseLayer = findLayerById(checkedLayer.value);
+        	            if (landuseLayer) {
+        	            	loadLanduseClassifications(checkedLayer.value, checkedLayer.id);
+        	            }
+        	        }
+        		});
+        	});
+        });
+        
+        // 초기 데이터 로드
+        const initialCheckedLayer = document.querySelector('input[name="landuseLayer"]:checked');
+        if (initialCheckedLayer) {
+            loadLanduseClassifications(initialCheckedLayer.value, initialCheckedLayer.id);
+        }
+    }
+    		
+    /**
+     * 툴바 관련 이벤트
+     */
+    function initializeToolbarEvents() {
+        // 툴바 버튼 클릭 이벤트
+        document.querySelectorAll('.btn[data-action]').forEach(button => {
+            button.addEventListener('click', function() {
+                handleToolbarAction(this.getAttribute('data-action'), this);
+            });
+        });
+
+        // 전체화면 변경 감지 이벤트
+        document.addEventListener('fullscreenchange', function() {
+            const fullscreenBtn = document.querySelector('[data-action="fullscreen"]');
+            if (fullscreenBtn) {
+                fullscreenBtn.classList.toggle('active', document.fullscreenElement !== null);
+            }
+        });
+        
+        // 커튼뷰 활성화/비활성화 이벤트
+        document.getElementById('curtainSwitch').addEventListener('change', function() {
+            toggleCurtainView(this.checked);
+        });
+        
+        // 커튼뷰 우측 배경지도 변경 이벤트
+        document.querySelectorAll('input[name="curtainView"]').forEach(radio => {
+            radio.addEventListener('change', function(e) {
+                const curtainSwitch = document.getElementById('curtainSwitch');
+                if (!curtainSwitch || !curtainSwitch.checked) {
+                    _GL.COMMON.showToast('Please turn on Curtain View first', 'warning');
+                    return;
+                }
+                
+                if (sideControl && this.checked) {
+                    setRightLayer(this.value);
+                }
+            });
+        });
+    }
+
+    // public API
+    return {
+        init: function() {
+            if (initialized) return;
+            initializeSources();
+            initializeLayers();
+            createMapInstance();
+            initializeMapCapture();
+            initializeUIComponents();
+            initializeEventListeners();
+            initialized = true;
+        },
+        getInstance: function() {
+            return instance;
+        }
+    };
+})();
+
+// DOM 로드 완료 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    _GL.MAP.init();
+});

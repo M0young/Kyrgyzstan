@@ -1,0 +1,17 @@
+package egovframework.main.admin.role.service;
+
+import lombok.Getter;
+import lombok.Setter;
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+public class RoleVO {
+    private String group_no;
+    private String authry_cd;
+    private LocalDateTime reg_dt;
+    private LocalDateTime mdfcn_dt;
+    
+    private String group_nm;
+    private String authry_nm;
+}

@@ -1,0 +1,36 @@
+package egovframework.main.admin.history.visit.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import egovframework.main.admin.history.visit.dao.VisitDAO;
+import egovframework.main.admin.history.visit.dto.VisitDTO;
+import egovframework.rte.fdl.cmmn.EgovAbstractServiceImpl;
+
+@Service("visitService")
+public class VisitService extends EgovAbstractServiceImpl {
+
+    @Resource(name = "visitDAO")
+    private VisitDAO visitDAO;
+    
+    public int countVisit(String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("query", processedQuery);
+        return visitDAO.countVisit(params);
+    }
+    
+    public List<VisitDTO> selectPagedVisit(int offset, int size, String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("offset", offset);
+        params.put("size", size);
+        params.put("query", processedQuery);
+        return visitDAO.selectPagedVisit(params);
+    }
+}

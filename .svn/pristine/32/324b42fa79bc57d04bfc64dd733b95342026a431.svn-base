@@ -1,0 +1,50 @@
+package egovframework.main.admin.code.type.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.springframework.stereotype.Repository;
+
+import egovframework.main.admin.code.type.dto.TypeDTO;
+import egovframework.rte.psl.dataaccess.EgovAbstractMapper;
+
+@Repository("typeDAO")
+public class TypeDAO extends EgovAbstractMapper {
+
+    @Resource(name = "sqlSession")
+    public void setSqlSessionFactory(SqlSessionFactory sqlSessionFactory) {
+        super.setSqlSessionFactory(sqlSessionFactory);
+    }
+    
+    public List<TypeDTO> selectAllType() {
+        return selectList("typeDAO.selectAllType");
+    }
+    
+    public List<TypeDTO> selectTypeBySearch(Map<String, Object> params) {
+        return selectList("typeDAO.selectTypeBySearch", params);
+    }
+    
+    public int countType(Map<String, Object> params) {
+        return selectOne("typeDAO.countType", params);
+    }
+    
+    public List<TypeDTO> selectPagedType(Map<String, Object> params) {
+        return selectList("typeDAO.selectPagedType", params);
+    }
+    
+    public void insertLandType(TypeDTO typeDTO) {
+    	insert("typeDAO.insertLandType", typeDTO);
+    }
+    
+    public int updateType(TypeDTO land_type) {
+    	int rowAffected = update("typeDAO.updateType", land_type);
+    	return rowAffected;
+    }
+    
+    public int deleteType(int type_cd) {
+        return update("typeDAO.deleteType", type_cd);
+    }
+}

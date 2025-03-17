@@ -1,0 +1,68 @@
+package egovframework.main.admin.code.classification.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+
+import egovframework.environment.security.CustomUserDetails;
+import egovframework.main.admin.code.classification.dao.ClassDAO;
+import egovframework.main.admin.code.classification.dto.ClassDTO;
+import egovframework.rte.fdl.cmmn.EgovAbstractServiceImpl;
+@Service("classService")
+public class ClassService extends EgovAbstractServiceImpl {
+    
+    @Resource(name = "classDAO")
+    private ClassDAO classDAO;
+    
+    public int countClass(String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) 
+                                  ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("query", processedQuery);
+        return classDAO.countClass(params);
+    }
+    
+    public List<ClassDTO> selectPagedClass(int offset, int size, String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) 
+                                  ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("offset", offset);
+        params.put("size", size);
+        params.put("query", processedQuery);
+        return classDAO.selectPagedClass(params);
+    }
+    
+    public void insertLandClass(ClassDTO classDTO) {
+        // 1) SecurityContextHolder에서 현재 로그인 사용자의 UserDetails를 가져옴
+        CustomUserDetails userDetails =
+            (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        // 2) UserDetails에서 user_no 추출
+        int currentUserNo = userDetails.getUserNo();
+        System.out.println("userDetail : " + userDetails);
+        System.out.println("eml : " + userDetails.getUsername());
+        System.out.println("GouprName : " + userDetails.getGroupName());
+        System.out.println("RealName : " + userDetails.getRealName());
+        System.out.println("User_no : " + userDetails.getUserNo());
+        System.out.println("others : " + userDetails.getAuthorities());
+
+        // 3) DTO에 rgtr 값 세팅
+        classDTO.setRgtr(currentUserNo);
+
+        // 4) DAO 호출
+        classDAO.insertLandClass(classDTO);
+    }
+    
+    public void updateClass(ClassDTO classDTO) {
+    	classDAO.updateClass(classDTO);
+    }
+    
+    public void deleteClass(int lclsf_cd) {
+    	classDAO.deleteClass(lclsf_cd);
+    }
+}

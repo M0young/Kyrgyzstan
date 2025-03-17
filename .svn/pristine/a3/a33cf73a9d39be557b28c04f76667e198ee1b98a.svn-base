@@ -1,0 +1,41 @@
+package egovframework.environment.security;
+
+import java.util.Collections;
+
+import javax.annotation.Resource;
+
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.stereotype.Service;
+
+import egovframework.main.user.auth.service.AuthService;
+import egovframework.main.user.auth.dto.AuthDTO;
+
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+    @Resource
+    private AuthService authService;
+
+    @Override
+    public UserDetails loadUserByUsername(String email) throws BadCredentialsException {
+        AuthDTO auth = authService.selectUserForAuth(email);
+
+        if (auth == null) {
+            throw new BadCredentialsException("");
+        }
+        
+        return new CustomUserDetails(
+    		auth.getEml(), 
+    	    auth.getUser_nm(),    
+    	    auth.getPwd(),    
+    	    auth.getDel_yn().equals("N"),
+    	    true,
+    	    true,
+    	    auth.getLgn_cnt() < 5,
+    	    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + auth.getGroup_nm().toUpperCase()))
+    	);
+    }
+}

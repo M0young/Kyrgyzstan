@@ -1,0 +1,29 @@
+package egovframework.main.admin.history.visit.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.springframework.stereotype.Repository;
+
+import egovframework.main.admin.history.visit.dto.VisitDTO;
+import egovframework.rte.psl.dataaccess.EgovAbstractMapper;
+
+@Repository("visitDAO")
+public class VisitDAO extends EgovAbstractMapper {
+
+    @Resource(name = "sqlSession")
+    public void setSqlSessionFactory(SqlSessionFactory sqlSessionFactory) {
+        super.setSqlSessionFactory(sqlSessionFactory);
+    }
+    
+    public int countVisit(Map<String, Object> params) {
+        return selectOne("visitDAO.countVisit", params);
+    }
+    
+    public List<VisitDTO> selectPagedVisit(Map<String, Object> params) {
+        return selectList("visitDAO.selectPagedVisit", params);
+    }
+}

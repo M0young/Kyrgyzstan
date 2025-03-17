@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="authDAO">
+    <!-- email 중복 체크 -->
+    <select id="selectUserByEmail" parameterType="String" resultType="AuthDTO">
+	    SELECT *
+	    FROM klums."user"
+	    WHERE eml = #{value} AND del_yn = 'N'
+	</select>
+    
+    <!-- 사용자 조회 -->
+    <select id="selectUserForAuth" parameterType="String" resultType="AuthDTO">
+	    SELECT 
+	    	u.user_no,
+	        u.group_no,
+	        u.user_nm,
+	        u.eml,
+	        u.pwd,
+	        u.prvc_clct_agre_yn,
+	        u.del_yn,
+	        u.lgn_cnt,
+	        g.group_nm
+	    FROM klums."user" u
+	    INNER JOIN klums.user_group g ON u.group_no = g.group_no
+	    WHERE u.eml = #{eml} AND del_yn = 'N'
+    </select>
+    
+    <!-- 그룹 권한 조회 -->
+	<select id="selectAuthoritiesByGroup" parameterType="int" resultType="String">
+	    SELECT a.authry_nm
+		FROM klums.group_authry g
+		JOIN klums.authry a ON g.authry_no = a.authry_no
+		WHERE g.group_no = #{groupNo}
+	</select>
+    
+    <!-- 사용자 등록 -->
+    <insert id="insertUserInfo" parameterType="AuthDTO">
+        INSERT INTO klums."user"
+        (
+            user_nm,
+            eml,
+            pwd
+        )
+        VALUES
+        (
+            #{user_nm},
+            #{eml},
+            #{pwd}
+        )
+    </insert>
+
+    <!-- 로그인 시도 횟수 업데이트 -->
+	<update id="updateLoginCount" parameterType="AuthDTO">
+	    UPDATE klums."user"
+	    SET lgn_cnt = COALESCE(CAST(lgn_cnt AS INTEGER), 0) + 1,
+	        last_lgn_dt = CURRENT_TIMESTAMP
+	    WHERE eml = #{eml} AND del_yn = 'N'
+	</update>
+    
+	<!-- 로그인 성공시 카운트 초기화 -->
+	<update id="resetLoginCount" parameterType="AuthDTO">
+	    UPDATE klums."user"
+	    SET lgn_cnt = '0',
+	        last_lgn_dt = CURRENT_TIMESTAMP
+	    WHERE eml = #{eml} AND del_yn = 'N'
+	</update>
+	    
+	<!-- 임시 비밀번호 설정 -->
+    <update id="updateTempPassword" parameterType="AuthDTO">
+        UPDATE klums."user"
+        SET pwd = #{pwd},
+            tmpr_pwd_yn = 'Y',
+            mdfcn_dt = CURRENT_TIMESTAMP,
+            lgn_cnt = 0
+        WHERE user_no = #{user_no} AND del_yn = 'N'
+    </update>
+
+    <!-- 비밀번호 변경 -->
+    <update id="updatePassword" parameterType="AuthDTO">
+        UPDATE klums."user"
+        SET pwd = #{pwd},
+            tmpr_pwd_yn = 'N',
+            mdfcn_dt = CURRENT_TIMESTAMP
+        WHERE user_no = #{user_no} AND del_yn = 'N'
+    </update>
+</mapper>

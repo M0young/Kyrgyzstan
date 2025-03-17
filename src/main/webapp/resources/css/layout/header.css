@@ -1,0 +1,127 @@
+@charset "UTF-8";
+/* =====================================================
+    main-body
+======================================================*/
+.language-selector .navbar {
+	background: none !important;
+    box-shadow: none !important;
+    user-select: none !important;
+}
+
+.language-selector .dropdown-menu[data-bs-popper] {
+    top: 95% !important;
+}
+
+.dropdown-item.active {
+  background-color: rgba(32, 107, 196, 0.06);
+}
+
+.dropdown-item {
+  padding: .5rem 1rem;
+}
+
+.avatar.avatar-xs {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: .75rem;
+  border-radius: 4px;
+}
+
+
+/* =====================================================
+    Common
+======================================================*/
+header.navbar {
+	z-index: 1033;
+}
+
+.header-container {
+	max-width: 100% !important;
+}
+
+.header-container .navbar, .header-container .navbar-brand {
+	user-select: none !important;
+}
+
+.header-container .avatar.avatar-xs {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: .75rem;
+  border-radius: 4px;
+}
+
+.header-container .icon {
+	--tblr-icon-size: 1.5rem !important;
+}
+
+.header-center {
+	width: 450px;
+	margin-left: 21%;
+	margin-right: 21%;
+}
+
+.header-menu {
+	top: calc(3rem + 1px);
+	right: 0px;
+}
+
+@media (max-width: 768px) {
+    .header-container .navbar-brand {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 0 0.5rem;
+    }
+    .header-container .navbar-nav .nav-item {
+        padding: 0 0.25rem !important;
+    }
+    .header-container .nav-link {
+        padding: 0.3rem !important;
+    }
+    .header-container .nav-link-icon {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+
+/* =====================================================
+    Navigation
+======================================================*/
+.header-container .nav-link.active .nav-link-icon,
+.header-container .nav-link.active .nav-link-title {
+    color: var(--tblr-primary);
+    font-weight: 500;
+}
+
+.header-container .nav-link {
+    position: relative;
+    transition: all 0.2s ease-in-out;
+}
+
+.header-container .nav-link:hover {
+    transform: translateY(-1px);
+}
+
+.header-container .nav-link.active {
+    background-color: rgba(32, 107, 196, 0.04);
+}
+
+
+/* =====================================================
+    Contact - menu
+======================================================*/
+#contactMenu {
+	--tblr-dropdown-padding-y: 0 !important;
+	z-index: 1;
+}
+
+.header-menu .card {
+    border: none;
+    width: 400px;
+}
+
+.header-menu textarea {
+    min-height: 150px;
+    max-height: 350px;
+}

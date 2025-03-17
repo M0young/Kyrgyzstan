@@ -1,0 +1,46 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+
+
+<div class="modal modal-blur fade" id="edit-modal-report" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="User Edit">
+	<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Code Edit</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal"	aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="mb-3">
+					<label class="form-label">Land Code</label> 
+					<input type="text" class="form-control" placeholder="Land Code">
+				</div>
+				
+				<div class="mb-3">
+					<label class="form-label">Land Type in English</label> 
+					<input type="text" class="form-control" placeholder="Land Type in English">
+				</div>
+				
+				<div class="mb-3">
+					<label class="form-label">Land Type in Kyrgyzstan</label> 
+					<input type="text" class="form-control" placeholder="Land Type in Kyrgyzstan">
+				</div>	
+				
+				<div class="mb-3">
+					<label class="form-label">Land Type in Russian</label> 
+					<input type="text" class="form-control" placeholder="Land Type in Russian">
+				</div>		
+				
+				<div class="mb-3">
+					<label class="form-label">Remark</label> 
+					<input type="text" class="form-control" placeholder="Remark">
+				</div>	
+			</div>
+			
+			<div class="modal-footer justify-content-between">
+				<button type="button" class="btn btn-primary" id="saveEditUser">SAVE</button>
+                <button type="button" class="btn btn-secondary" id="cancelEditUser">CANCEL</button>
+                <button type="button" class="btn btn-outline-danger" id="deleteEditUser">DELETE</button>
+			</div>
+		</div>
+	</div>
+</div>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="regionDAO">
+	<!-- 행정구역 목록 조회 -->
+    <select id="selectRegionList" resultType="RegionDTO">
+        SELECT 
+            item1, item2, item3,
+            item1_original, item2_original, item3_original,
+            xpos, ypos, 
+            ROW_NUMBER() OVER() AS ROWNUM,
+            pcode
+        FROM (
+            SELECT DISTINCT 
+                CASE 
+                    WHEN '${lang}' = 'ru' THEN adm1_ru
+                    WHEN '${lang}' = 'ky' THEN adm1_ky
+                    ELSE adm1_en
+                END AS item1,
+                CASE 
+                    WHEN '${lang}' = 'ru' THEN adm2_ru
+                    WHEN '${lang}' = 'ky' THEN adm2_ky
+                    ELSE adm2_en
+                END AS item2,
+                CASE 
+                    WHEN '${lang}' = 'ru' THEN adm3_ru
+                    WHEN '${lang}' = 'ky' THEN adm3_ky
+                    ELSE adm3_en
+                END AS item3,
+                CASE 
+                    WHEN adm1_en ILIKE '%'||#{search}||'%' THEN adm1_en
+                    WHEN adm1_ru ILIKE '%'||#{search}||'%' THEN adm1_ru
+                    WHEN adm1_ky ILIKE '%'||#{search}||'%' THEN adm1_ky
+                    ELSE NULL
+                END AS item1_original,
+                CASE 
+                    WHEN adm2_en ILIKE '%'||#{search}||'%' THEN adm2_en
+                    WHEN adm2_ru ILIKE '%'||#{search}||'%' THEN adm2_ru
+                    WHEN adm2_ky ILIKE '%'||#{search}||'%' THEN adm2_ky
+                    ELSE NULL
+                END AS item2_original,
+                CASE 
+                    WHEN adm3_en ILIKE '%'||#{search}||'%' THEN adm3_en
+                    WHEN adm3_ru ILIKE '%'||#{search}||'%' THEN adm3_ru
+                    WHEN adm3_ky ILIKE '%'||#{search}||'%' THEN adm3_ky
+                    ELSE NULL
+                END AS item3_original,
+                adm3_pcode as pcode,
+                ST_X(ST_Centroid(ST_Union(geom))) as xpos,
+                ST_Y(ST_Centroid(ST_Union(geom))) as ypos
+            FROM data.community
+            WHERE 1=1
+            <if test="search != null and search != ''">
+                AND (
+                    adm1_en ILIKE '%'||#{search}||'%' 
+                    OR adm1_ru ILIKE '%'||#{search}||'%'
+                    OR adm1_ky ILIKE '%'||#{search}||'%'
+                    OR adm2_en ILIKE '%'||#{search}||'%'
+                    OR adm2_ru ILIKE '%'||#{search}||'%'
+                    OR adm2_ky ILIKE '%'||#{search}||'%'
+                    OR adm3_en ILIKE '%'||#{search}||'%'
+                    OR adm3_ru ILIKE '%'||#{search}||'%'
+                    OR adm3_ky ILIKE '%'||#{search}||'%'
+                )
+            </if>
+            GROUP BY 
+                adm1_en, adm1_ru, adm1_ky,
+                adm2_en, adm2_ru, adm2_ky,
+                adm3_en, adm3_ru, adm3_ky,
+                adm3_pcode
+        ) AS PRO
+        ORDER BY item1, item2, item3
+        LIMIT #{pageUnit}
+        OFFSET #{firstIndex}
+    </select>
+
+    <!-- 행정구역 개수 조회 -->
+    <select id="selectRegionListCount" parameterType="RegionDTO" resultType="int">
+        SELECT count(*)
+        FROM (
+            SELECT DISTINCT 
+                adm1_en, adm1_ru, adm1_ky,
+                adm2_en, adm2_ru, adm2_ky,
+                adm3_en, adm3_ru, adm3_ky,
+                adm3_pcode
+            FROM data.community
+            WHERE 1=1
+            <if test="search != null and search != ''">
+                AND (
+                    adm1_en ILIKE '%'||#{search}||'%' 
+                    OR adm1_ru ILIKE '%'||#{search}||'%'
+                    OR adm1_ky ILIKE '%'||#{search}||'%'
+                    OR adm2_en ILIKE '%'||#{search}||'%'
+                    OR adm2_ru ILIKE '%'||#{search}||'%'
+                    OR adm2_ky ILIKE '%'||#{search}||'%'
+                    OR adm3_en ILIKE '%'||#{search}||'%'
+                    OR adm3_ru ILIKE '%'||#{search}||'%'
+                    OR adm3_ky ILIKE '%'||#{search}||'%'
+                )
+            </if>
+            GROUP BY 
+                adm1_en, adm1_ru, adm1_ky,
+                adm2_en, adm2_ru, adm2_ky,
+                adm3_en, adm3_ru, adm3_ky,
+                adm3_pcode
+        ) AS COUNT
+    </select>
+</mapper>

@@ -1,0 +1,96 @@
+package egovframework.environment.network;
+
+import egovframework.environment.config.GeoServerConfig;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Base64;
+import java.util.Collections;
+
+import javax.servlet.http.HttpServletRequest;
+
+@RestController
+@RequestMapping("/api/geoserver")
+public class GeoServerProxyController {
+    private static final Logger logger = LoggerFactory.getLogger(GeoServerProxyController.class);
+    
+    @Autowired
+    private GeoServerConfig geoServerConfig;
+    
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @RequestMapping("/**")
+    public ResponseEntity<byte[]> proxyRequest(HttpServletRequest request) {
+        try {
+            String resourcePath = new AntPathMatcher()
+                .extractPathWithinPattern("/api/geoserver/**", request.getRequestURI());
+            String targetUrl = geoServerConfig.getUrl() + "/" + resourcePath;
+            String queryString = request.getQueryString();
+            if (queryString != null) {
+                targetUrl += (targetUrl.contains("?") ? "&" : "?") + queryString;
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            Collections.list(request.getHeaderNames()).forEach(headerName -> {
+                if (!headerName.equalsIgnoreCase("host") && 
+                    !headerName.equalsIgnoreCase("content-length") &&
+                    !headerName.equalsIgnoreCase("transfer-encoding")) {
+                    headers.set(headerName, request.getHeader(headerName));
+                }
+            });
+
+            // 인증 설정
+            String[] auth = geoServerConfig.getAuth();
+            if (auth.length == 2) {
+                String credentials = auth[0] + ":" + auth[1];
+                String encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes());
+                headers.set("Authorization", "Basic " + encodedCredentials);
+            }
+
+            // chunk 관련 헤더 설정
+            headers.set("Accept-Encoding", "identity");
+
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                targetUrl,
+                HttpMethod.valueOf(request.getMethod()),
+                new HttpEntity<>(headers),
+                byte[].class
+            );
+
+            // 응답 헤더 처리
+            HttpHeaders responseHeaders = new HttpHeaders();
+            response.getHeaders().forEach((key, value) -> {
+                if (!key.equalsIgnoreCase("Transfer-Encoding") && 
+            	    !key.equalsIgnoreCase("Content-Encoding") && 
+            	    !key.equalsIgnoreCase("Content-Length")) {
+            	    responseHeaders.put(key, value);
+                }
+            });
+
+            // Content-Length 설정
+            if (response.getBody() != null) {
+                responseHeaders.setContentLength(response.getBody().length);
+            }
+            logger.debug("Request Method: {}", request.getMethod());
+            logger.debug("Request URL: {}", targetUrl);
+            logger.debug("Request Headers: {}", headers);
+            logger.debug("Response Status: {}", response.getStatusCode());
+            logger.debug("Response Headers: {}", response.getHeaders());
+
+            return ResponseEntity
+                .status(response.getStatusCode())
+                .headers(responseHeaders)
+                .body(response.getBody());
+        } catch (Exception e) {
+            logger.error("GeoServer proxy error: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+}

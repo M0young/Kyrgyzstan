@@ -1,0 +1,139 @@
+package egovframework.main.admin.role.web;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import egovframework.common.response.ApiResponse;
+import egovframework.main.admin.role.service.RoleService;
+import egovframework.main.admin.role.service.RoleVO;
+
+@RestController
+@RequestMapping("/api/role")
+public class RoleController {
+    private static final Logger logger = LoggerFactory.getLogger(RoleController.class);
+    
+    @Resource(name = "roleService")
+    private RoleService roleService;
+    
+    // 전체 그룹 조회
+    @PostMapping("/list")
+    public ResponseEntity<ApiResponse<List<RoleVO>>> selectGroupAuthryList() {
+        try {
+            List<RoleVO> authryList = roleService.selectGroupAuthryList();
+            return ApiResponse.success(authryList);  
+        } catch (Exception e) {
+            logger.error("authryList error", e);
+            return ApiResponse.error("authryList failed");
+        }
+    }
+    
+    // 페이지네이션
+    @GetMapping("/list/paged")
+    public ResponseEntity<ApiResponse<List<RoleVO>>> selectPagedGroupAuthryList(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        try {
+            int offset = page * size;
+            List<RoleVO> roles = roleService.selectPagedGroupAuthryList(offset, size);
+            return ApiResponse.success(roles);
+        } catch (Exception e) {
+            logger.error("Error fetching paged roles", e);
+            return ApiResponse.error("Failed to fetch paged roles");
+        }
+    }
+    
+    // 그룹 생성
+    @PostMapping("/insert")
+    public ResponseEntity<ApiResponse<Void>> insertGroupAuthry(@RequestBody RoleVO groupAuthry) {
+        try {
+            if (groupAuthry == null) {
+                return ApiResponse.error("Not exist");
+            }
+
+            if (groupAuthry.getGroup_nm() == null || groupAuthry.getGroup_nm().trim().isEmpty()) {
+                return ApiResponse.error("group_nm!!");
+            }
+            if (groupAuthry.getRgtr() == null || groupAuthry.getRgtr().trim().isEmpty()) {
+                return ApiResponse.error("rgtr!!");
+            }
+
+            roleService.insertGroupAuthry(groupAuthry);
+            return ApiResponse.success(null, "insert success");
+        } catch (Exception e) {
+            return ApiResponse.error("insert failed: " + e.getMessage());
+        }
+    }
+    
+    // 그룹 권한 수정
+    @PostMapping("/update")
+    public ResponseEntity<ApiResponse<Void>> updateGroupAuthry(RoleVO groupAuthry) {
+        try {
+        	roleService.updateGroupAuthry(groupAuthry);
+            return ApiResponse.success("update success.");
+        } catch (Exception e) {
+            return ApiResponse.error("update failed");
+        }
+    }
+    
+    // 그룹 권한 삭제
+    @PostMapping("/delete")
+    public ResponseEntity<ApiResponse<Void>> deleteGroupAuthry(RoleVO groupAuthry) {
+        try {
+            roleService.deleteGroupAuthry(groupAuthry);
+            return ApiResponse.success(null, "delete success");
+        } catch (Exception e) {
+            return ApiResponse.error("delete failed");
+        }
+    }
+    
+    // 그룹 권한 전체 삭제
+    @PostMapping("/delete-all")
+    public ResponseEntity<ApiResponse<Void>> deleteAllGroupAuthry(@RequestParam String groupId) {
+        try {
+            roleService.deleteAllGroupAuthry(groupId);
+            return ApiResponse.success(null, "deleteAll success");
+        } catch (Exception e) {
+            return ApiResponse.error("deleteAll failed");
+        }
+    }
+    
+    // 선택된 그룹의 권한 정보를 조회
+    @PostMapping("/getInfo")
+    public ResponseEntity<ApiResponse<List<Integer>>> selectAuthryInfo(@RequestBody Map<String, Object> params) {
+        try {
+            String groupNoStr = params.get("group_no").toString();
+            Integer groupNo = Integer.valueOf(groupNoStr);
+            List<Integer> authryList = roleService.selectAuthryInfo(groupNo);
+            return ApiResponse.success(authryList);
+        } catch (Exception e) {
+            logger.error("Error fetching authority info", e);
+            return ApiResponse.error("Failed to fetch authority info");
+        }
+    }
+    
+    // 선택된 그룹의 권한 정보를 업데이트
+    @PostMapping("/updateAuthList")
+    public ResponseEntity<ApiResponse<Void>> updateAuthList(@RequestBody Map<String, Object> params) {
+        try {
+            Integer groupNo = Integer.valueOf(params.get("group_no").toString());
+            @SuppressWarnings("unchecked")
+            List<Integer> authryNos = (List<Integer>) params.get("authry_nos");
+            roleService.updateAuthryList(groupNo, authryNos);
+            return ApiResponse.success(null, "udpate success");
+        } catch (Exception e) {
+            return ApiResponse.error("udpate failed");
+        }
+    }
+}

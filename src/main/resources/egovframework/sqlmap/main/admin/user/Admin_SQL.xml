@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="adminDAO">
+
+	<!-- 페이지네이션 -->
+	<select id="selectPagedUsers" parameterType="map" resultType="AdminDTO">
+	    SELECT 
+	        u.user_nm, 
+	        u.eml, 
+	        g.group_nm, 
+	        u.inst, 
+	        u.dept,
+	        TO_CHAR(u.reg_dt, 'YYYY-MM-DD') AS reg_dt,
+	        TO_CHAR(u.last_lgn_dt, 'YYYY-MM-DD HH24:MI:SS') AS last_lgn_dt
+	    FROM 
+	        klums."user" u
+	    LEFT JOIN 
+	        klums."user_group" g 
+	    ON 
+	        u.group_no = g.group_no
+	    WHERE 
+	        u.del_yn = 'N'
+	        <if test="query != null and query != ''">
+	             AND (
+                u.user_nm ILIKE '%'||#{query}||'%'
+                OR u.eml ILIKE '%'||#{query}||'%'
+                OR g.group_nm ILIKE '%'||#{query}||'%'
+                OR u.inst ILIKE '%'||#{query}||'%'
+                OR u.dept ILIKE '%'||#{query}||'%'
+                OR TO_CHAR(u.reg_dt, 'YYYY-MM-DD') ILIKE '%'||#{query}||'%'
+                OR TO_CHAR(u.last_lgn_dt, 'YYYY-MM-DD HH24:MI:SS') ILIKE '%'||#{query}||'%'
+            )
+	        </if>
+	    ORDER BY 
+	        u.user_nm
+	    LIMIT #{size} OFFSET #{offset}
+	</select>
+
+
+	<!-- 사용자 업데이트 -->
+	<update id="updateUser" parameterType="AdminDTO">
+	    UPDATE klums."user"
+	    SET 
+	        user_nm = #{user_nm},
+	        group_no = (SELECT group_no FROM klums."user_group" WHERE group_nm = #{group_nm}),
+	        inst = #{inst},
+	        dept = #{dept},
+	        mdfr = #{mdfr},
+	        last_lgn_dt = NOW(),
+	        mdfcn_dt = NOW()
+	    WHERE 
+	        eml = #{eml}
+	</update>
+
+	
+	<!-- 사용자 삭제 -->
+	<update id="deleteUser" parameterType="String">
+	    UPDATE klums."user"
+	    SET 
+	        del_yn = 'Y',
+	        mdfcn_dt = NOW(),
+	        del_dt = NOW()
+	    WHERE 
+	        eml = #{eml}
+	</update>
+	
+	<!-- 전체 로그 수 조회 (검색 포함) -->
+	<select id="countAllUsers" parameterType="map" resultType="int">
+	    SELECT COUNT(*)
+	    FROM klums."user" u
+	    LEFT JOIN klums."user_group" g ON u.group_no = g.group_no
+	    WHERE u.del_yn = 'N'
+	    <if test="query != null and query != ''">
+	         AND (
+	             u.user_nm ILIKE '%'||#{query}||'%'
+	             OR u.eml ILIKE '%'||#{query}||'%'
+	             OR g.group_nm ILIKE '%'||#{query}||'%'
+	             OR u.inst ILIKE '%'||#{query}||'%'
+	             OR u.dept ILIKE '%'||#{query}||'%'
+	             OR TO_CHAR(u.reg_dt, 'YYYY-MM-DD') ILIKE '%'||#{query}||'%'
+	             OR TO_CHAR(u.last_lgn_dt, 'YYYY-MM-DD HH24:MI:SS') ILIKE '%'||#{query}||'%'
+	         )
+	    </if>
+	</select>
+
+	
+	<select id="selectUserGroups" resultType="AdminDTO">
+		SELECT
+			group_no,
+			group_nm
+		FROM
+			klums."user_group"
+	</select>
+	
+</mapper>

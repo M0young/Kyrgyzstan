@@ -1,0 +1,123 @@
+package egovframework.main.admin.upload.progress.service.impl;
+
+import java.util.List;
+import java.util.UUID;
+
+import javax.annotation.Resource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import egovframework.rte.fdl.cmmn.EgovAbstractServiceImpl;
+import egovframework.main.admin.upload.progress.service.ProgressService;
+import egovframework.main.admin.upload.progress.service.ProgressVO;
+
+@Service("progressService")
+public class ProgressServiceImpl extends EgovAbstractServiceImpl implements ProgressService {
+	
+	private static final Logger logger = LoggerFactory.getLogger(ProgressServiceImpl.class);
+	
+	@Resource(name="progressDAO")
+	private ProgressDAO progressDAO;
+	
+	@Resource(name = "progressService")
+    private ProgressService progressService;
+	
+	@Override
+	public int insertProgress(ProgressVO progressVO) {
+		return progressDAO.insertProgress(progressVO);
+	}
+	
+	@Override
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public int updateProgress(ProgressVO progressVO) {
+		return progressDAO.updateProgress(progressVO);
+	}
+	   
+	@Override
+	public ProgressVO getProgress(String progressId) {
+		return progressDAO.selectProgress(progressId);
+	}
+	   
+	@Override
+	public List<ProgressVO> getProgressList(String usrNo) {
+		return progressDAO.selectProgressList(usrNo);
+	}
+	   
+	@Override
+	public int deleteOldProgress(String date) {
+		return progressDAO.deleteOldProgress(date);
+	}
+	
+	@Override
+    public ProgressVO initializeProgress(int userNo) {
+        ProgressVO progressVO = new ProgressVO();
+        progressVO.setPrgrs_id(UUID.randomUUID().toString());
+        progressVO.setUser_no(userNo);
+        progressVO.setPrgrs(0);
+        progressVO.setCmptn_rcd(0);
+        progressVO.setCmptn_yn("N");
+        progressVO.setStts("INITIALIZING");
+        
+        try {
+	        this.insertProgress(progressVO);
+	    } catch (Exception e) {
+	        logger.error("Failed to initailize progress: {}", e.getMessage());
+	    }
+        
+        return progressVO;
+    }
+    
+	@Override
+    public void handleProgressStatus(ProgressVO progressVO, String status, Exception e) {
+        switch(status) {
+            case "INITIALIZING":
+                progressVO.setPrgrs(0);
+                progressVO.setStts("INITIALIZING");
+                break;
+                
+            case "PARSING":
+                progressVO.setStts("PARSING");
+                break;
+                
+            case "PROCESSING":
+                progressVO.setStts("PROCESSING");
+                break;
+                
+            case "COMPLETED":
+                progressVO.setPrgrs(100);
+                progressVO.setCmptn_yn("Y");
+                progressVO.setStts("COMPLETED");
+                break;
+                
+            case "ERROR":
+                String errorMsg = "Error occurred while processing records: " + e.getMessage();
+                progressVO.setErr(errorMsg);
+                progressVO.setCmptn_yn("N");
+                progressVO.setStts("ERROR");
+                break;
+        }
+        
+        try {
+        	progressService.updateProgress(progressVO);
+        } catch (Exception ex) {
+            logger.error("Failed to update status: {}", ex.getMessage());
+        }
+    }
+    
+	@Override
+	public void updateProgressCount(ProgressVO progressVO, int processedCount, int totalRecords) {
+	    progressVO.setCmptn_rcd(processedCount);
+	    progressVO.setTnocs_rcd(totalRecords);
+	    int progress = (int) Math.round((double) processedCount / totalRecords * 100);
+	    progressVO.setPrgrs(progress);
+	    try {
+	    	progressService.updateProgress(progressVO);
+	    } catch (Exception e) {
+	        logger.error("Failed to update progress: {}", e.getMessage());
+	    }
+	}
+}

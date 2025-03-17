@@ -1,0 +1,156 @@
+package egovframework.main.map.upload.shapefile.service;
+
+import org.geotools.referencing.CRS;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
+
+import egovframework.common.component.MessageProvider;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+
+@Service
+public class ShapefileValidationService {
+    private static final Logger logger = LoggerFactory.getLogger(ShapefileValidationService.class);
+    private static final String[] REQUIRED_EXTENSIONS = {".shp", ".dbf", ".shx", ".prj"};
+
+    @Resource
+    private MessageProvider messageProvider;
+    
+    public int prepareShapefiles(MultipartHttpServletRequest request, Map<String, File> shpFiles) throws Exception {
+        // 1. 업로드된 파일들의 확장자 검증 (필수 파일 포함 여부)
+        checkRequiredExtensions(request.getFiles("layerFile"));
+        
+        // 2. 임시 파일 생성 및 저장
+        createTemporaryFiles(request, shpFiles);
+        
+        // 3. 생성된 파일들의 접근 가능 여부 검증
+        checkFileAccess(shpFiles);
+        
+        // 4. PRJ 파일에서 좌표계 추출 및 검증
+        Integer coord = extractCoordinateSystem(shpFiles.get(".prj"));
+        if (coord == null) {
+            throw new IllegalArgumentException(messageProvider.getMessage("shapefile.validation.coordinate.unknown"));
+        }
+        
+        return coord;
+    }
+    
+    private void checkRequiredExtensions(List<MultipartFile> files) {
+        Set<String> uploadedExtensions = files.stream()
+            .map(file -> {
+                String name = file.getOriginalFilename();
+                return name != null ? name.substring(name.lastIndexOf(".")).toLowerCase() : "";
+            })
+            .collect(Collectors.toSet());
+
+        List<String> missing = Arrays.stream(REQUIRED_EXTENSIONS)
+            .filter(ext -> !uploadedExtensions.contains(ext))
+            .collect(Collectors.toList());
+
+        if (!missing.isEmpty()) {
+            throw new IllegalStateException(
+                messageProvider.getMessage("shapefile.validation.required", new String[]{String.join(", ", missing)})
+            );
+        }
+    }
+    
+    public void createTemporaryFiles(MultipartHttpServletRequest request, Map<String, File> shpFiles) throws Exception {
+        List<MultipartFile> files = request.getFiles("layerFile");
+        String baseFileName = null;
+        
+        for (MultipartFile file : files) {
+            if (file != null && !file.isEmpty()) {
+                String originalFileName = file.getOriginalFilename();
+                if (originalFileName == null) continue;
+                
+                int lastDotIndex = originalFileName.lastIndexOf(".");
+                if (lastDotIndex > 0) {
+                    String extension = originalFileName.substring(lastDotIndex).toLowerCase();
+                    String nameWithoutExt = originalFileName.substring(0, lastDotIndex);
+                    
+                    if (baseFileName == null) {
+                        baseFileName = nameWithoutExt
+                            .replaceAll("[\\s\\p{Punct}]+", "_")
+                            .replaceAll("_{2,}", "_")
+                            .replaceAll("^_|_$", "");
+                    }
+                    
+                    File tempFile = new File(System.getProperty("java.io.tmpdir"), baseFileName + extension);
+                    file.transferTo(tempFile);
+                    shpFiles.put(extension, tempFile);
+                    logger.info("임시 파일 생성됨: " + tempFile.getAbsolutePath());
+                }
+            }
+        }
+        
+        if (baseFileName == null) {
+            throw new IllegalStateException(messageProvider.getMessage("shapefile.validation.upload.empty"));
+        }
+    }
+    
+    private void checkFileAccess(Map<String, File> files) {
+        for (File file : files.values()) {
+            if (!file.exists() || !file.canRead()) {
+                throw new IllegalStateException(
+                    messageProvider.getMessage("shapefile.validation.access", new String[]{file.getAbsolutePath()})
+                );
+            }
+        }
+    }
+    
+    public Integer extractCoordinateSystem(File prjFile) {
+        try {
+            String wkt = new String(Files.readAllBytes(prjFile.toPath()));
+            CoordinateReferenceSystem crs = CRS.parseWKT(wkt);
+            String crsName = crs.getName().toString();
+            
+            if (crsName.contains("Pulkovo_1942") && crsName.contains("GK_Zone_13N")) {
+                logger.info("Pulkovo 1942 GK Zone 13N 좌표계가 감지됨 ({}), EPSG:28473 사용", crsName);
+                return 28473;
+            }
+            if (crsName.contains("Popular_Visualisation_CRS_Mercator")) {
+                logger.info("Mercator projection 좌표계가 감지됨 ({}), EPSG:3857 사용", crsName);
+                return 3857;
+            }
+            if (crsName.contains("Kyrg-06") || crsName.contains("TM_Zone_3")) {
+                logger.info("Kyrgyzstan local 좌표계가 감지됨 ({}), EPSG:7694 사용", crsName);
+                return 7694;
+            }
+            Integer coord = CRS.lookupEpsgCode(crs, false);
+            if (coord != null) {
+                logger.info("EPSG 코드 발견: {}", coord);
+                return coord;
+            }
+            
+            logger.error("좌표계를 결정할 수 없음: {}", crsName);
+            return null;
+        } catch (Exception e) {
+            logger.error("좌표계 파싱 실패: {}", e.getMessage());
+            return null;
+        }
+    }
+    
+    public void cleanupTemporaryFiles(Map<String, File> files) {
+        for (File file : files.values()) {
+            if (file.exists()) {
+                if (file.delete()) {
+                    logger.info("임시 파일 삭제됨: " + file.getAbsolutePath());
+                } else {
+                    logger.warn("임시 파일 삭제 실패: " + file.getAbsolutePath());
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,292 @@
+@charset "UTF-8";
+/* =====================================================
+    Map size
+======================================================*/
+.page-wrapper-full {
+    margin-left: 0 !important;
+}
+
+
+/* =====================================================
+    toolbar - main
+======================================================*/
+.toolbar-container {
+	position: absolute !important;
+	top: 50% !important;
+	right: 0 !important;
+    margin-right: 1rem !important;
+    transform: translateY(-50%) !important;
+    z-index: 9;
+}
+
+.btn-group-vertical .btn-icon {
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-group-vertical .btn:hover {
+	color: var(--tblr-primary) !important;
+    transform: translateY(-1px);
+}
+
+.btn-group-vertical .btn.active {
+    background-color: var(--tblr-btn-bg) !important;
+    color: var(--tblr-primary) !important;
+}
+
+
+/* =====================================================
+    toolbar - dropdown-menu
+======================================================*/
+.toolbar-menu.show {
+  right: 100%;
+  margin-right: calc(1rem - 1px);
+  transform: translateY(-83%);
+}
+
+.toolbar-menu.show:after {
+  content: '';
+  position: absolute;
+  right: -0.4rem;
+  bottom: 1rem;
+  transform: translateY(-50%);
+  border-left: 0.4rem solid var(--tblr-dropdown-bg, #ffffff);
+  border-top: 0.4rem solid transparent;
+  border-bottom: 0.4rem solid transparent;
+}
+
+.toolbar-menu-container {
+    padding: 0 12px;
+}
+
+.toolbar-menu-header {
+    margin-bottom: 4px;
+    padding: 0.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.toolbar-menu-header .form-check {
+	margin-bottom: 0px !important;
+	margin-right: -8px !important;
+}
+
+.toolbar-menu-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.toolbar-menu-list {
+  min-width: 200px;
+  padding: 0.5rem;
+}
+
+.toolbar-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 0;
+    cursor: pointer;
+}
+
+.toolbar-menu-check {
+    margin-right: 8px;
+}
+
+
+/* =====================================================
+    sidebar - tabs
+======================================================*/
+.navbar-tabs-vertical {
+  position: fixed;
+  top: 56px;
+  min-height: 100vh;
+  width: 3rem;
+  background: var(--tblr-bg-surface);
+  border-right: 1px solid var(--tblr-border-color);
+  z-index: 1031;
+  user-select: none !important;
+}
+
+.navbar-tabs-vertical .nav {
+  padding: 0.5rem 0;
+}
+
+.navbar-tabs-vertical .nav-link {
+  padding: 1.5rem 0;
+  justify-content: center;
+  color: var(--tblr-body-color);
+  transition: opacity 0.3s ease;
+  opacity: 1;
+}
+
+.navbar-tabs-vertical .nav-link-text {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-weight: 500;
+}
+
+.navbar-tabs-vertical:has(+ #sidebar.collapsed) .nav-link {
+    opacity: .7;
+}
+
+.navbar-tabs-vertical .nav-link:hover {
+  background-color: rgba(var(--tblr-primary-rgb), 0.1);
+}
+
+.navbar-tabs-vertical .nav-link.active {
+  background-color: var(--tblr-primary-rgb, 0.2);
+  color: var(--tblr-primary);
+}
+
+.navbar-tabs-vertical:has(+ #sidebar.collapsed) .nav-link:not(.active):hover {
+    opacity: 1;
+    background-color: rgba(var(--tblr-primary-rgb), 0.1);
+}
+
+.navbar-tabs-vertical .sidebar-toggle svg {
+    transition: transform 0.3s ease;
+    opacity: 1;
+}
+
+.navbar-tabs-vertical:has(+ #sidebar.collapsed) .sidebar-toggle svg {
+    transform: rotate(180deg);
+    opacity: .7;
+}
+
+
+/* =====================================================
+    sidebar - main
+======================================================*/
+.navbar-sidebar {
+  width: calc(26rem - 10px) !important;
+  min-height: 100vh;
+  transition: transform 0.3s ease;
+  position: fixed;
+  left: 3rem !important;
+  top: 56px !important;
+  z-index: 1030;
+  padding: 0;
+}
+
+.navbar-sidebar .card {
+  width: calc(26rem - 10px) !important;
+  border: 0px !important;
+}
+
+.navbar-sidebar.collapsed {
+  transform: translateX(-100%);
+}
+
+
+/* =====================================================
+    sidebar - LAYERS - Layers
+======================================================*/
+.navbar-sidebar .layer-accordion .form-range {
+	width: 40% !important;
+}
+
+.navbar-sidebar .layer-accordion #basemapSlider {
+    position: absolute;
+    right: 50px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+.navbar-sidebar .layer-accordion .toolbar-menu-item label {
+	display: flex;
+	align-items: center;
+	padding: 0;
+    cursor: pointer;
+}
+
+.navbar-sidebar .layer-accordion .toolbar-menu-item span {
+	margin-left: .2rem;
+}
+
+/* =====================================================
+    sidebar - LAYERS - Land Use
+======================================================*/
+.navbar-sidebar .landuse-accordion .form-check-input {
+	position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+.navbar-sidebar .landuse-accordion .accordion-body span {
+	margin-left: 2rem;
+}
+
+
+/* =====================================================
+    sidebar - SEARCH
+======================================================*/
+
+
+
+/* =====================================================
+    sidebar - MANAGE
+======================================================*/
+
+
+
+/* =====================================================
+    loading - spinner
+======================================================*/
+@keyframes spinner {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.spinner:after {
+  content: "";
+  box-sizing: border-box;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 45px;
+  height: 45px;
+  margin-top: -22.5px;
+  margin-left: -22.5px;
+  border-radius: 50%;
+  border: 3px solid rgba(52, 152, 219, 0.3);
+  border-top-color: #3498db;
+  animation: spinner 0.8s ease infinite;
+}
+
+.spinner:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 35px;
+  height: 35px;
+  margin-top: -17.5px;
+  margin-left: -17.5px;
+  border-radius: 50%;
+  background: rgba(52, 152, 219, 0.1);
+  animation: pulse 1s ease infinite;
+}
+
+
+/* =====================================================
+    ol-tooltip
+======================================================*/
+.ol-tooltip {
+	user-select: none !important;
+}
+
+
+/* =====================================================
+    ol-ext
+======================================================*/
+.ol-swipe button:after, .ol-swipe button:before, 
+.ol-swipe:after, .ol-swipe:before {
+	background: var(--tblr-white) !important;
+}

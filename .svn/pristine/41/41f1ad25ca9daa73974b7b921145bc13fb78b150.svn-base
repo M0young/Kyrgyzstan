@@ -1,0 +1,23 @@
+package egovframework.main.admin.upload.progress.service;
+
+import java.util.List;
+
+public interface ProgressService {
+	
+    int insertProgress(ProgressVO progressVO);
+    
+    int updateProgress(ProgressVO progressVO);
+    
+    ProgressVO getProgress(String progressId);
+    
+    List<ProgressVO> getProgressList(String usrNo);
+    
+    int deleteOldProgress(String date);
+    
+    ProgressVO initializeProgress(int userNo);
+    
+    void handleProgressStatus(ProgressVO progressVO, String status, Exception e);
+    
+    void updateProgressCount(ProgressVO progressVO, int processedCount, int totalRecords);
+    
+}

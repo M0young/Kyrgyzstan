@@ -1,0 +1,128 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+    
+<!-- land use map upload -->
+<div class="popup center Upload-Pop subPop">
+    <button class="icon sz20px Popclose-Btn">
+        <i class="glb-ico sz20px icobg20 close-bk"></i>close
+    </button>
+    <h3 class="popup-tit icon">
+        <i class="glb-ico sz25px icobg25 upload-bk"></i>File Upload
+    </h3>
+    <div class="popup-wrap">
+        <!-- 스텝 1: 파일 선택 -->
+        <div class="step-container active" id="popupDiUpload">
+	        <form id="shpUploadForm" action="./layer/uploadShpData" enctype="multipart/form-data">
+	            <div class="upload-area" id="popupDiUploadArea">
+	                <div class="upload-icon">
+	                    <svg viewBox="0 0 24 24" width="50" height="50">
+	                        <path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+	                    </svg>
+	                </div>
+	                <h3>File Upload</h3>
+	                <p>Drag and drop files or <span class="browse-btn">Browse files</span></p>
+	                <input type="file" id="popupIpFiles" name="files" multiple accept=".shp, .dbf, .shx, .prj" required style="display: none;">
+	                <div class="upload-hints">
+				        <small class="upload-hint">※ Required file formats: .shp, .shx, .dbf, .prj</small>
+				        <small class="upload-hint">※ Maximum file size: 200MB per file</small>
+				        <small class="upload-hint">(Some files Over 60MB, will be processed by schedule in order)</small>
+				        <small class="upload-hint">※ All required files must be uploaded together (.shp, .shx, .dbf, .prj)</small>
+				    </div>
+	            </div>
+	            <div class="file-preview">
+	                <h4>Selected Files</h4>
+	                <div class="file-list" id="popupDiFileList"></div>
+	            </div>
+	            <div class="upload-actions">
+	                <button type="button" class="clear-btn">Clear</button>
+	                <button type="button" class="next-btn" id="popupBtNext">Next</button>
+                </div>
+            </form>
+    	</div>
+    	
+    	<!-- 스텝 2: 설정 -->
+        <div class="step-container" id="popupDiSettings">
+            <div class="settings-form">
+                <div class="setting-group">
+                    <label>Map Type</label>
+                    <select name="mapType" id="popupSlMaptype" class="form-select" required>
+                        <option value="">Select Map Type</option>
+                        <option value="land">Land Use Map</option>
+						<option value="land_bsc">Basic Land Use Map</option>
+						<option value="land_plan">Land Use Plan Map</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+				    <label>Coordinate System</label>
+				    <select name="coordinateSystem" id="popupSlCoord" class="form-select" required>
+				        <option value="">Select Coordinate System</option>
+				        <option value="28473">Pulkovo 1942 / Gauss-Kruger 13N (EPSG:28473)</option>
+						<option value="32643">WGS 84 / UTM Zone 43N (EPSG:32643)</option>
+						<option value="3857">WGS 84 / Pseudo-Mercator (EPSG:3857)</option>
+						<option value="4326">WGS 84 (EPSG:4326)</option>
+						<option value="7692">Kyrg-06 / zone 1 (EPSG:7692)</option>
+						<option value="7693">Kyrg-06 / zone 2 (EPSG:7693)</option>
+						<option value="7694">Kyrg-06 / zone 3 (EPSG:7694)</option>
+						<option value="7695">Kyrg-06 / zone 4 (EPSG:7695)</option>
+						<option value="7696">Kyrg-06 / zone 5 (EPSG:7696)</option>
+				    </select>
+				    <span id="popupSpPrjNote" class="note-text">* Auto-detected from PRJ file</span>
+				</div>
+                <div class="setting-group">
+                    <label>Year</label>
+                    <div class="year-input-group">
+                        <input type="number" name="year" id="popupIpYear" min="1900" max="2100" class="form-input" required placeholder="Enter year">
+                    </div>
+                </div>
+				<div class="setting-group">
+				    <label>Layer Processing</label>
+				    <div class="radio-group">
+				        <label class="radio-label">
+				            <input type="radio" name="layerProcess" value="append" required>
+				            Append to existing layer
+				        </label>
+				        <label class="radio-label">
+				            <input type="radio" name="layerProcess" value="replace" required>
+				            Replace existing layer
+				        </label>
+				    </div>
+				</div>
+                <div class="upload-actions">
+                    <button type="button" class="back-btn" id="popupBtBack">Back</button>
+                    <button type="button" class="upload-btn" id="popupBtUpload">Upload</button>
+                </div>
+            </div>
+        </div>
+        
+    	<!-- 스텝 3: 진행상황 -->
+    	<div class="step-container" id="popupDiProgress">
+		    <div class="progress-status uploading">
+		        <h3 class="status-text">
+				    <span class="loading-text">Uploading files</span>
+				    <span class="loading-dots"></span>
+				</h3>
+		        <div class="progress-wrapper">
+		            <div id="progressBar"></div>
+		        </div>
+		        <div class="progress-details">
+		            <p class="progress-text">
+		                Progress: <span id="progressPercentage">0%</span>
+		            </p>
+		            <p class="records-text">
+		                Records processed: <span id="processedRecords">0</span> / <span id="totalRecords">0</span>
+		            </p>
+		        </div>
+		    </div>
+		</div>
+
+        <!-- 스텝 4: 완료 -->
+        <div class="step-container" id="popupDiComplete">
+		    <div class="progress-status">
+		        <div class="success-icon">✓</div>
+		        <p class="status-text">Upload Complete</p>
+		        <p class="detail-text">Total records processed: <span id="finalRecords">0</span></p>
+		        <button class="done-btn">Confirm</button>
+		    </div>
+		</div>
+    </div>
+</div>

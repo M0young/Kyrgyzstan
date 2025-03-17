@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="profileDAO">
+    <!-- 사용자 정보 조회 -->
+    <select id="selectUserInfo" parameterType="AuthDTO" resultType="AuthDTO">
+        SELECT 
+            u.user_no,
+            u.user_id,
+            u.user_nm,
+            u.eml,
+            u.pwd,
+            u.inst,
+            u.dept,
+            u.telno,
+            u.reg_dt,
+            u.mdfcn_dt,
+            u.prvc_clct_agre_yn,
+            u.tmpr_pwd_yn,
+            u.lgn_cnt,
+            u.last_lgn_dt,
+            g.group_no,
+            g.group_nm,
+            CASE 
+                WHEN u.lgn_cnt >= 5 THEN 'Y'
+                ELSE 'N'
+            END as is_locked
+        FROM klums."user" u
+        INNER JOIN klums.user_group g ON u.group_no = g.group_no
+        WHERE u.eml = #{eml}
+    </select>
+    
+    <!-- 사용자 정보 수정 -->
+    <update id="updateUserInfo" parameterType="AuthDTO">
+        UPDATE klums."user"
+        SET 
+            eml = #{eml},
+            telno = #{telno},
+            inst = #{inst},
+            dept = #{dept},
+            mdfcn_dt = CURRENT_TIMESTAMP
+        WHERE user_no = #{user_no}
+        AND del_yn = 'N'
+    </update>
+    
+	<!-- 회원 탈퇴 -->
+	<update id="WithdrawUser" parameterType="AuthDTO">
+        UPDATE klums."user"
+        SET del_yn = 'Y',
+            del_dt = CURRENT_TIMESTAMP,
+            prvc_clct_agre_yn = 'N',
+            mdfcn_dt = CURRENT_TIMESTAMP
+        WHERE user_no = #{user_no}
+        AND pwd = #{pwd}
+    </update>
+</mapper>

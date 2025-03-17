@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="layerDAO">
+    <select id="selectLanduseClassifications" parameterType="Map" resultType="layerDTO">
+	    SELECT DISTINCT
+	        CASE #{lang}
+	            WHEN 'en' THEN ll.lclsf_nm_en
+	            WHEN 'ru' THEN ll.lclsf_nm_ru
+	            WHEN 'ky' THEN ll.lclsf_nm_ky
+	        END lclsf_nm_${lang},
+	        CASE #{lang}
+	            WHEN 'en' THEN ls.sclsf_nm_en
+	            WHEN 'ru' THEN ls.sclsf_nm_ru
+	            WHEN 'ky' THEN ls.sclsf_nm_ky
+	        END sclsf_nm_${lang},
+	        ls.sclsf_cd
+	    FROM data.${layerType} l
+	    JOIN klums.land_lclsf ll ON l.lclsf_cd = ll.lclsf_cd
+	    JOIN klums.land_sclsf ls ON l.sclsf_cd = ls.sclsf_cd
+	    ORDER BY 1, 2
+	</select>
+	
+	<select id="selectLandtypeClassifications" parameterType="Map" resultType="layerDTO">
+	    SELECT DISTINCT
+	        CASE #{lang}
+	            WHEN 'en' THEN ll.lclsf_nm_en
+	            WHEN 'ru' THEN ll.lclsf_nm_ru
+	            WHEN 'ky' THEN ll.lclsf_nm_ky
+	        END lclsf_nm_${lang},
+	        CASE #{lang}
+	            WHEN 'en' THEN ls.sclsf_nm_en
+	            WHEN 'ru' THEN ls.sclsf_nm_ru
+	            WHEN 'ky' THEN ls.sclsf_nm_ky
+	        END sclsf_nm_${lang},
+	        ls.sclsf_cd
+	    FROM data.${layerType} l
+	    JOIN klums.land_lclsf ll ON l.lclsf_cd = ll.lclsf_cd
+	    JOIN klums.land_sclsf ls ON l.sclsf_cd = ls.sclsf_cd
+	    ORDER BY 1, 2
+	</select>
+</mapper>

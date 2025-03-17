@@ -1,0 +1,59 @@
+package egovframework.main.admin.code.type.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import egovframework.main.admin.code.type.dao.TypeDAO;
+import egovframework.main.admin.code.type.dto.TypeDTO;
+import egovframework.rte.fdl.cmmn.EgovAbstractServiceImpl;
+
+@Service("typeService")
+public class TypeService extends EgovAbstractServiceImpl {
+	@Resource(name = "typeDAO")
+    private TypeDAO typeDAO;
+    
+    public List<TypeDTO> selectAllType() {
+        return typeDAO.selectAllType();
+    }
+    
+    public List<TypeDTO> selectTypeBySearch(String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("query", processedQuery);
+        return typeDAO.selectTypeBySearch(params);
+    }
+    
+    public int countType(String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("query", processedQuery);
+        return typeDAO.countType(params);
+    }
+    
+    public List<TypeDTO> selectPagedType(int offset, int size, String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("offset", offset);
+        params.put("size", size);
+        params.put("query", processedQuery);
+        return typeDAO.selectPagedType(params);
+    }
+    
+    public void insertLandType(TypeDTO typeDTO) {
+    	typeDAO.insertLandType(typeDTO);
+    }
+    
+    public void updateType(TypeDTO land_type) {
+    	typeDAO.updateType(land_type);
+    }
+    
+    
+    public void deleteType(int land_type) {
+    	typeDAO.deleteType(land_type);
+    }
+}

@@ -1,0 +1,51 @@
+package egovframework.main.admin.user.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.springframework.stereotype.Repository;
+
+import egovframework.main.admin.user.dto.AdminDTO;
+import egovframework.rte.psl.dataaccess.EgovAbstractMapper;
+
+@Repository("adminDAO")
+public class AdminDAO extends EgovAbstractMapper {
+    
+    @Resource(name = "sqlSession")
+    public void setSqlSessionFactory(SqlSessionFactory sqlSession) {
+        super.setSqlSessionFactory(sqlSession);
+    }
+
+    public List<AdminDTO> selectAllUsers() {
+        List<AdminDTO> users = selectList("adminDAO.selectAllUsers");
+        return users;
+    }
+    
+    public List<AdminDTO> selectUsersBySearch(String search) {
+        return selectList("adminDAO.selectUsersBySearch", search);
+    }
+    
+    public List<AdminDTO> selectPagedUsers(Map<String, Object> params) {
+        return selectList("adminDAO.selectPagedUsers", params);
+    }
+    
+    public int updateUser(AdminDTO user) {
+        int rowsAffected = update("adminDAO.updateUser", user);
+        return rowsAffected;
+    }
+    
+    public int deleteUser(String eml) {
+        return update("adminDAO.deleteUser", eml);
+    }
+    
+    public int countAllUsers() {
+        return selectOne("adminDAO.countAllUsers");
+    }
+    
+    public List<AdminDTO> selectUserGroups() {
+    	return selectList("adminDAO.selectUserGroups");
+    }
+}

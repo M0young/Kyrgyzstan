@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="symbolDAO">
+    <!-- 모든 심볼 조회 -->
+    <select id="selectSymbolList" parameterType="String" resultType="SymbolDTO">
+        SELECT 
+            symbol_cd,
+            symbol_nm_${value},
+            file_path,
+            rmrk
+        FROM 
+            klums.land_symbol
+        WHERE 
+            del_yn = 'N'
+        ORDER BY 
+            symbol_cd
+    </select>
+    
+    <!-- 특정 심볼 조회 -->
+    <select id="selectSymbolById" parameterType="int" resultType="SymbolDTO">
+        SELECT 
+            symbol_cd,
+            symbol_nm_ru,
+            symbol_nm_ky,
+            symbol_nm_en,
+            file_path,
+            rmrk
+        FROM 
+            klums.land_symbol
+        WHERE 
+            symbol_cd = #{value}
+        AND 
+            del_yn = 'N'
+    </select>
+    
+    <!-- 심볼 추가 -->
+    <insert id="insertSymbol" parameterType="SymbolDTO">
+        INSERT INTO klums.land_symbol (
+        	symbol_cd,
+            symbol_nm_ru,
+            symbol_nm_ky,
+            symbol_nm_en,
+            file_path,
+            rmrk,
+            rgtr,
+            reg_dt,
+            del_yn
+        ) VALUES (
+        	#{symbol_cd},
+            #{symbol_nm_ru},
+            #{symbol_nm_ky},
+            #{symbol_nm_en},
+            #{file_path},
+            #{rmrk},
+            #{rgtr},
+            CURRENT_TIMESTAMP,
+            'N'
+        )
+    </insert>
+    
+    <!-- 심볼 수정 -->
+    <update id="updateSymbol" parameterType="SymbolDTO">
+        UPDATE klums.land_symbol
+        <set>
+        	<if test="symbol_cd != null">symbol_cd = #{symbol_cd},</if>
+            <if test="symbol_nm_ru != null">symbol_nm_ru = #{symbol_nm_ru},</if>
+            <if test="symbol_nm_ky != null">symbol_nm_ky = #{symbol_nm_ky},</if>
+            <if test="symbol_nm_en != null">symbol_nm_en = #{symbol_nm_en},</if>
+            <if test="file_path != null">file_path = #{file_path},</if>
+            <if test="rmrk != null">rmrk = #{rmrk},</if>
+            mdfr = #{mdfr},
+            mdfcn_dt = CURRENT_TIMESTAMP
+        </set>
+        WHERE symbol_cd = #{symbolCd}
+    </update>
+    
+    <!-- 심볼 삭제 (논리적 삭제) -->
+    <update id="removeSymbol" parameterType="int">
+        UPDATE klums.land_symbol
+        SET 
+            del_yn = 'Y',
+            del_dt = CURRENT_TIMESTAMP
+        WHERE 
+            symbol_cd = #{symbolCd}
+    </update>
+</mapper>

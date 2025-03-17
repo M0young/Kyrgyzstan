@@ -1,0 +1,40 @@
+package egovframework.main.admin.role.code;
+
+public enum RoleCode {
+	SEARCH("AUTHRY_SEARCH", "검색 기능", "검색 권한"),
+	DATA_MGMT("AUTHRY_DATA_MGMT", "데이터 관리", "데이터 관리 권한"),
+	SYS_MGMT("AUTHRY_SYS_MGMT", "시스템 관리", "시스템 관리 권한"),
+	STATS("AUTHRY_STATS", "통계", "통계 조회 권한"),
+	DASH("AUTHRY_DASH", "대시보드", "대시보드 조회 권한");
+
+	private final String code;
+	private final String name;
+	private final String description;
+
+	RoleCode(String code, String name, String description) {
+		this.code = code;
+		this.name = name;
+		this.description = description;
+	}
+
+	public String getCode() {
+		return code;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public static RoleCode getByCode(String code) {
+		for (RoleCode authryCode : values()) {
+			if (authryCode.getCode().equals(code)) {
+				return authryCode;
+			}
+		}
+		return null;
+	}
+}

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://www.mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mappingDAO">
+    
+    <!-- 전체 건수 조회 -->
+    <select id="countMapping" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM klums.land_lclsf
+    </select>
+
+    <!-- Classification List 조회 (페이징 적용) -->
+    <select id="selectClassificationList" parameterType="map" resultType="MappingDTO">
+        SELECT 
+            lclsf_cd,
+            lclsf_nm_en,
+            lclsf_nm_ky,
+            lclsf_nm_ru,
+            rmrk
+        FROM 
+            klums.land_lclsf
+        ORDER BY lclsf_cd ASC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+    
+    <!-- Subclassification List 조회 (단순 조회, 페이징 없음) -->
+    <select id="selectSubClassificationList" parameterType="map" resultType="MappingDTO">
+        SELECT 
+        	lclsf_cd,
+            sclsf_cd,
+            sclsf_nm_en,
+            sclsf_nm_ky,
+            sclsf_nm_ru,
+            rmrk
+        FROM 
+            klums.land_sclsf
+        ORDER BY sclsf_cd ASC
+    </select>
+    
+    <!-- 대분류 코드 변경 -->
+    <update id="updateSubclassification" parameterType="MappingDTO">
+    	UPDATE klums.land_sclsf
+    	SET lclsf_cd = #{lclsf_cd}
+    	WHERE sclsf_cd = #{sclsf_cd}
+    </update>
+    
+</mapper>

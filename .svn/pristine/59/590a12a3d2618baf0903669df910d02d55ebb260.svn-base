@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://www.mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="classDAO">
+    
+    <!-- 전체 건수 조회 (검색 포함) -->
+	<select id="countClass" parameterType="map" resultType="int">
+	    SELECT COUNT(*)
+	    FROM klums.land_lclsf
+	    WHERE 1=1
+	    <if test="query != null and query != ''">
+	        AND (CAST(lclsf_cd AS TEXT) ILIKE #{query} 
+	             OR lclsf_nm_en ILIKE #{query} 
+	             OR lclsf_nm_ky ILIKE #{query} 
+	             OR lclsf_nm_ru ILIKE #{query} 
+	             OR rmrk ILIKE #{query})
+	    </if>
+	</select>
+
+    
+    <!-- 페이징된 로그 조회 -->
+    <select id="selectPagedClass" parameterType="map" resultType="ClassDTO">
+	    SELECT 
+	        lclsf_cd,
+	        lclsf_nm_en,
+	        lclsf_nm_ky,
+	        lclsf_nm_ru,
+	        rmrk
+	    FROM 
+	        klums.land_lclsf
+	    WHERE 1=1
+	    <if test="query != null and query != ''">
+	        AND (CAST(lclsf_cd AS TEXT) ILIKE #{query} 
+	            OR lclsf_nm_en ILIKE #{query} 
+	            OR lclsf_nm_ky ILIKE #{query} 
+	            OR lclsf_nm_ru ILIKE #{query} 
+	            OR rmrk ILIKE #{query})
+	    </if>
+	    ORDER BY lclsf_cd ASC
+	    LIMIT #{size} OFFSET #{offset}
+	</select>
+
+	<!-- 토지 유형 생성 -->
+	<insert id="insertLandClass" parameterType="ClassDTO">
+	    INSERT INTO klums.land_lclsf (
+	        lclsf_cd,
+	        lclsf_nm_en,
+	        lclsf_nm_ky,
+	        lclsf_nm_ru,
+	        rmrk,
+	        rgtr
+	    ) VALUES (
+	        #{lclsf_cd},
+	        #{lclsf_nm_en},
+	        #{lclsf_nm_ky},
+	        #{lclsf_nm_ru},
+	        #{rmrk},
+	        #{rgtr}
+	    )
+	</insert>
+    
+    <!-- 토지유형 업데이트 -->
+    <update id="updateClass" parameterType="ClassDTO">
+    	UPDATE klums.land_lclsf
+    	SET
+    		lclsf_nm_en = #{lclsf_nm_en},
+    		lclsf_nm_ky = #{lclsf_nm_ky},
+    		lclsf_nm_ru = #{lclsf_nm_ru},
+    		rmrk = #{rmrk},
+    		mdfcn_dt = CURRENT_TIMESTAMP
+    	WHERE
+    		lclsf_cd = #{lclsf_cd}
+    </update>
+    
+    <!-- 토지 유형 실제 삭제 -->
+    <delete id="deleteClass" parameterType="int">
+    	DELETE FROM klums.land_lclsf
+    	WHERE lclsf_cd = #{lclsf_cd}
+    </delete>
+    
+</mapper>

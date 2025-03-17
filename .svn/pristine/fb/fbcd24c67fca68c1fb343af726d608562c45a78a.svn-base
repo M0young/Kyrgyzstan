@@ -1,0 +1,37 @@
+package egovframework.main.admin.history.log.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.springframework.stereotype.Repository;
+
+import egovframework.main.admin.history.log.dto.LogDTO;
+import egovframework.rte.psl.dataaccess.EgovAbstractMapper;
+
+@Repository("logDAO")
+public class LogDAO extends EgovAbstractMapper {
+
+    @Resource(name = "sqlSession")
+    public void setSqlSessionFactory(SqlSessionFactory sqlSessionFactory) {
+        super.setSqlSessionFactory(sqlSessionFactory);
+    }
+    
+    public List<LogDTO> selectAllLogs() {
+        return selectList("logDAO.selectAllLogs");
+    }
+    
+    public List<LogDTO> selectLogsBySearch(Map<String, Object> params) {
+        return selectList("logDAO.selectLogsBySearch", params);
+    }
+    
+    public int countLogs(Map<String, Object> params) {
+        return selectOne("logDAO.countLogs", params);
+    }
+    
+    public List<LogDTO> selectPagedLogs(Map<String, Object> params) {
+        return selectList("logDAO.selectPagedLogs", params);
+    }
+}

@@ -1,0 +1,52 @@
+# Login messages
+auth.login.invalid=Email or password is incorrect
+auth.login.locked=Account has been locked due to excessive login attempts
+auth.login.failed=An error occurred during login processing
+auth.login.duplicate=Already logged in from another device
+
+# Registration validation
+auth.validation.name.required=Name is required
+auth.validation.name.length=Name cannot exceed 20 characters
+auth.validation.email.required=Email is required
+auth.validation.email.invalid=Invalid email format
+auth.validation.email.duplicate=Email is already in use
+auth.validation.password.required=Password is required
+auth.validation.password.format=Password must be 8-15 characters long and include letters, numbers, and special characters
+auth.validation.terms.required=Please agree to the terms of service
+
+# Email verification
+auth.verification.required=Please complete email verification
+auth.verification.limit=Too many attempts. Please try again later
+auth.verification.sent=Verification code has been sent
+auth.verification.failed=Failed to send verification code
+auth.verification.invalid=Invalid verification code
+auth.verification.success=Email verification completed
+
+# Registration status
+auth.signup.success=Registration completed successfully
+auth.signup.failed=Registration failed
+
+# Password management
+auth.password.email.notfound=Email does not exist
+auth.password.temp.sent=Temporary password has been sent to your email
+auth.password.temp.failed=Failed to issue temporary password
+auth.password.reset.success=Password has been changed
+auth.password.reset.failed=Password change failed
+
+# Shapefile validation
+shapefile.validation.required=Missing required files: {0}
+shapefile.validation.upload.empty=No valid files were uploaded
+shapefile.validation.access=File access error: {0}
+shapefile.validation.coordinate.unknown=Unable to determine coordinate system
+
+# Upload status
+shapefile.upload.started=File upload started
+shapefile.upload.failed=File upload failed
+
+# Progress status
+shapefile.progress.notfound=Progress information not found
+shapefile.progress.failed=Failed to get progress information
+
+# Notification
+notification.session.expiring=Your session is about to expire. Please extend your session to continue working
+notification.session.expired=Your session has expired. Please sign in again

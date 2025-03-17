@@ -1,0 +1,72 @@
+package egovframework.main.admin.history.visit.controller;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import egovframework.common.component.MessageComponent;
+import egovframework.common.response.ApiResponse;
+import egovframework.main.admin.history.visit.dto.VisitDTO;
+import egovframework.main.admin.history.visit.service.VisitService;
+
+@RestController
+@RequestMapping("/api/admin/history/visit")
+public class VisitController {
+	@Resource(name = "visitService")
+	private VisitService visitService;
+	
+	@Resource
+	private MessageComponent messageComponet;
+	
+	// 전체 로그 조회
+	@GetMapping("/list")
+	public ResponseEntity<ApiResponse<List<VisitDTO>>> getAllVisit(){
+		try {
+			List<VisitDTO> visit = visitService.selectAllVisit();
+			return ApiResponse.success(visit);
+		} catch (Exception e) {
+			return ApiResponse.error("Failed to getch visit");
+		}
+	}
+	
+    // 검색 기능
+    @GetMapping("/list/search")
+    public ResponseEntity<ApiResponse<List<VisitDTO>>> searchVisit(
+            @RequestParam(value = "query", required = false) String query) {
+        try {
+            List<VisitDTO> visit = visitService.selectVisitBySearch(query);
+            return ApiResponse.success(visit);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ApiResponse.error("Failed to fetch search results.");
+        }
+    }
+    
+    // 페이지네이션
+    @GetMapping("/list/paged")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getPagedVisit(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam(value = "query", required = false) String query) {
+        try {
+            int offset = page * size;
+            int totalVisit = visitService.countVisit(query);
+            List<VisitDTO> visit = visitService.selectPagedVisit(offset, size, query);
+            Map<String, Object> result = new HashMap<>();
+            result.put("total", totalVisit);
+            result.put("visit", visit);
+            return ApiResponse.success(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ApiResponse.error("Failed to fetch paged logs.");
+        }
+    }
+}

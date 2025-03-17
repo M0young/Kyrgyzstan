@@ -1,0 +1,633 @@
+/*========================================================
+    DATE: 2024. 02
+    AUTHOR: MOYOUNG
+    DESC: Map Edit Module
+========================================================*/
+_GL.MAP_EDIT = (function() {
+    'use strict';
+
+    let initialized = false;
+
+    // 모듈 상태 관리
+    let instance = null;
+    let editMode = null;
+    let currentEditLayer = null;
+
+    // OpenLayers 객체
+    let editSource = null;
+    let editLayer = null;
+    let drawInteraction = null;
+    let modifyInteraction = null;
+    let selectInteraction = null;
+
+    // 이벤트 리스너와 히스토리 관리
+    const eventListeners = { draw: null, select: null, modify: null };
+    const history = {
+        changes: [],  // 변경사항 기록
+        position: -1  // 현재 위치
+    };
+
+    /**
+     * DOM 요소 가져오기
+     */
+    function getElements() {
+        return {
+            startBtn: document.getElementById('editStartBtn'),
+            stopBtn: document.getElementById('editStopBtn'),
+            undoBtn: document.getElementById('editUndoBtn'),
+            redoBtn: document.getElementById('editRedoBtn'),
+            editMode: document.querySelectorAll('input[name="editMode"]'),
+            drawModeBtn: document.getElementById('drawModeBtn'),
+            modifyModeBtn: document.getElementById('modifyModeBtn'),
+            deleteModeBtn: document.getElementById('deleteModeBtn'),
+            saveBtn: document.getElementById('editSaveBtn'),
+            discardBtn: document.getElementById('editDiscardBtn')
+        };
+    }
+    
+    /**
+     * UI 상태 초기화
+     */
+    function initializeUIState() {
+        const elements = getElements();
+        
+        // 나머지 모든 컨트롤 비활성화
+        elements.stopBtn.disabled = true;
+        elements.undoBtn.disabled = true;
+        elements.redoBtn.disabled = true;
+        elements.drawModeBtn.disabled = true;
+        elements.modifyModeBtn.disabled = true;
+        elements.deleteModeBtn.disabled = true;
+        elements.saveBtn.disabled = true;
+        elements.discardBtn.disabled = true;
+        elements.editMode.forEach(radio => {
+            radio.checked = false;
+        });
+    }
+    
+    /**
+     * 편집 레이어 초기화
+     */
+    function initializeEditLayer() {
+        editSource = new ol.source.Vector();
+        editLayer = new ol.layer.Vector({
+            source: editSource,
+            style: new ol.style.Style({
+                fill: new ol.style.Fill({
+                    color: 'rgba(255, 255, 255, 0.4)'
+                }),
+                stroke: new ol.style.Stroke({
+                    color: '#ffcc33',
+                    width: 2
+                }),
+                image: new ol.style.Circle({
+                    radius: 7,
+                    fill: new ol.style.Fill({
+                        color: '#ffcc33'
+                    })
+                })
+            }),
+            name: 'editLayer'
+        });
+        instance.addLayer(editLayer);
+    }
+
+    /**
+     * 편집 도구 초기화
+     */
+    function initializeInteractions() {
+        removeInteractions();
+
+        // Draw
+        drawInteraction = new ol.interaction.Draw({
+            source: editSource,
+            type: 'Polygon',
+            geometryName: 'geom'
+        });
+        eventListeners.draw = event => {
+            if (!event.feature.getId()) {
+                event.feature.setId('temp_' + Date.now());
+            }
+            addToHistory('insert', event.feature);
+        };
+        drawInteraction.on('drawend', eventListeners.draw);
+
+        // Select
+        selectInteraction = new ol.interaction.Select({
+            style: new ol.style.Style({
+                fill: new ol.style.Fill({
+                    color: 'rgba(255, 255, 255, 0.5)'
+                }),
+                stroke: new ol.style.Stroke({
+                    color: '#2196F3',
+                    width: 2
+                })
+            })
+        });
+        eventListeners.select = (event) => {
+            if (editMode === 'delete' && event.selected.length > 0) {
+                const selected = event.selected[0];
+                
+                setTimeout(() => {
+                    if (confirm('Remove selected feature?')) {
+                        const clonedFeature = selected.clone();
+                        clonedFeature.setId(selected.getId());
+                        clonedFeature.setStyle(editLayer.getStyle());
+                        addToHistory('delete', clonedFeature);
+                        editSource.removeFeature(selected);
+                    }
+                    selectInteraction.getFeatures().clear();
+                }, 100);
+            }
+        };
+        selectInteraction.on('select', eventListeners.select);
+
+        // Modify
+        modifyInteraction = new ol.interaction.Modify({
+            features: selectInteraction.getFeatures(),
+            pixelTolerance: 10,
+            geometryName: 'geom'
+        });
+        eventListeners.modify = event => {
+            event.features.forEach(feature => {
+                const originalFeature = feature.clone();
+                if (!feature.getId()) {
+                    feature.setId(Date.now().toString());
+                }
+                addToHistory('update', feature, originalFeature.getGeometry());
+            });
+        };
+        modifyInteraction.on('modifyend', eventListeners.modify);
+        
+        // 도구 추가 및 비활성화
+        [drawInteraction, selectInteraction, modifyInteraction].forEach(interaction => {
+            instance.addInteraction(interaction);
+            interaction.setActive(false);
+        });
+    }
+
+    /**
+     * 편집 도구 제거
+     */
+    function removeInteractions() {
+        if (drawInteraction && eventListeners.draw) {
+            drawInteraction.un('drawend', eventListeners.draw);
+            drawInteraction = null;
+        }
+        if (selectInteraction && eventListeners.select) {
+        	selectInteraction.un('select', eventListeners.select);
+        	selectInteraction = null;
+        }
+        if (modifyInteraction && eventListeners.modify) {
+            modifyInteraction.un('modifyend', eventListeners.modify);
+            modifyInteraction = null;
+        }
+    }
+    
+/* =====================================================
+    Edit Main
+======================================================*/
+    /**
+     * WFS 요청으로 피처 로드
+     */
+    function loadLayerFeatures() {
+    	if (!layerId) {
+            _GL.COMMON.showToast('Invalid layer ID', 'error');
+            return Promise.reject(new Error('Invalid layer ID'));
+        }
+    	
+    	instance.getTargetElement().classList.add('spinner');
+    	
+        const wfsUrl = new URL(window.location.origin + _GL.MAP_CONFIG.URLS.WFS);
+        wfsUrl.searchParams.append('service', 'WFS');
+        wfsUrl.searchParams.append('version', '1.1.0');
+        wfsUrl.searchParams.append('request', 'GetFeature');
+        wfsUrl.searchParams.append('typeName', 'klums:land_use');
+        wfsUrl.searchParams.append('outputFormat', 'application/json');
+        wfsUrl.searchParams.append('srsName', 'EPSG:3857');
+
+        fetch(wfsUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data.features) {
+                    throw new Error('No features in response');
+                }
+
+                const features = new ol.format.GeoJSON().readFeatures(data, {
+                    featureProjection: 'EPSG:3857'
+                });
+
+                editSource.clear();
+                features.forEach(feature => {
+                    editSource.addFeature(feature);
+                });
+                editLayer.setVisible(true);
+            })
+            .catch(error => {
+                console.error('Error loading features:', error);
+                _GL.COMMON.showToast(`Failed to load features: ${error.message}`, 'error');
+            }).finally(() => {
+            	instance.getTargetElement().classList.remove('spinner');
+            });
+    }
+    
+    /**
+     * 편집 모드 설정
+     */
+    function setEditMode(mode) {
+        [drawInteraction, selectInteraction, modifyInteraction].forEach(interaction => {
+        	if (interaction) interaction.setActive(false);
+        });
+
+        editMode = mode;
+        
+        switch(mode) {
+            case 'draw':
+                drawInteraction.setActive(true);
+                break;
+            case 'modify':
+            	selectInteraction.setActive(true);
+                modifyInteraction.setActive(true);
+                break;
+            case 'delete':
+                selectInteraction.setActive(true);
+                break;
+        }
+    }
+    
+    /**
+     * UI 상태 업데이트
+     */
+    function updateUIState() {
+        const elements = getElements();
+        const hasChanges = history.changes.length > 0;
+        
+        // Undo/Redo 버튼
+        elements.undoBtn.disabled = history.position < 0;
+        elements.redoBtn.disabled = history.position >= history.changes.length - 1;
+        
+        // 저장/취소 버튼
+        if (!elements.stopBtn.disabled) {
+            // 편집 중에는 저장/취소 비활성화
+            elements.saveBtn.disabled = true;
+            elements.discardBtn.disabled = true;
+        } else {
+            // 편집 중지 상태에서는 변경사항 있을 때만 활성화
+            elements.saveBtn.disabled = !hasChanges;
+            elements.discardBtn.disabled = !hasChanges;
+        }
+    }
+
+    function resetEditState() {
+        const elements = getElements();
+        
+        // 모든 상태 초기화
+        history.changes = [];
+        history.position = -1;
+        editSource.clear();
+        
+        // UI 초기 상태로
+        elements.startBtn.disabled = false;
+        elements.saveBtn.disabled = true;
+        elements.discardBtn.disabled = true;
+        
+        updateUIState();
+    }
+    
+    /**
+     * WFS 트랜잭션 전송
+     */
+    function sendWFSTransaction(changes) {
+    	const currentChanges = history.changes.slice(0, history.position + 1);
+        
+        if (!currentChanges || currentChanges.length === 0) {
+            return Promise.reject(new Error('No changes to save'));
+        }
+    	
+        return new Promise((resolve, reject) => {
+            const formatWFS = new ol.format.WFS();
+
+            const transOptions = {
+                featureNS: 'http://klums',
+                featurePrefix: 'klums',
+                featureType: currentEditLayer,
+                srsName: 'EPSG:3857',
+                version: '1.1.0',
+                geometryName: 'geom'
+            };
+
+            let features = {
+        		insert: [],
+        		update: [],
+                delete: []
+            };
+
+            currentChanges.forEach(change => {
+                switch (change.type) {
+                    case 'insert':
+                        features.insert.push(change.feature);
+                        break;
+                    case 'update':
+                        features.update.push(change.feature);
+                        break;
+                    case 'delete':
+                        features.delete.push(change.feature);
+                        break;
+                }
+            });
+
+            const transactionXml = formatWFS.writeTransaction(
+                features.insert,
+                features.update,
+                features.delete,
+                transOptions
+            );
+
+            let serializedXml = new XMLSerializer().serializeToString(transactionXml);
+            serializedXml = serializedXml.replace(/<Name>geometry<\/Name>/g, '<Name>geom</Name>');
+            
+            console.log('Transaction XML:', serializedXml);
+
+            fetch(_GL.MAP_CONFIG.URLS.WFS, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/xml',
+                    'X-CSRF-TOKEN': _GL.csrf.token
+                },
+                body: serializedXml
+            })
+            .then(response => response.text().then(text => {
+                if (!response.ok || text.includes('Exception') || text.includes('Error')) {
+                    console.error('Server error response:', text);
+                    throw new Error(`WFS Transaction failed: ${response.status}\nResponse: ${text}`);
+                }
+                console.log('Transaction response:', text);
+                resolve(text);
+            }))
+            .catch(error => {
+                console.error('Transaction error:', error);
+                reject(error);
+            });
+        });
+    }
+    
+    /**
+     * 모듈 정리
+     */
+    function cleanup() {
+        removeInteractions();
+        if (editLayer) {
+            instance.removeLayer(editLayer);
+            editLayer = null;
+        }
+    }
+    
+    /**
+     * 히스토리에 변경사항 추가
+     */
+    function addToHistory(type, feature, originalGeometry = null) {
+        const clonedFeature = feature.clone();
+        const featureId = feature.getId();
+        
+        if (!featureId) {
+            console.warn('Feature has no ID');
+            return;
+        }
+        
+        clonedFeature.setId(featureId);
+        
+        const change = {
+            type: type,
+            feature: clonedFeature,
+            timestamp: Date.now(),
+            originalGeometry: originalGeometry || feature.getGeometry().clone()
+        };
+
+        // 현재 위치 이후의 변경사항 제거
+        if (history.position < history.changes.length - 1) {
+            history.changes = history.changes.slice(0, history.position + 1);
+        }
+
+        history.changes.push(change);
+        history.position++;
+        
+        updateUIState();
+    }
+    
+    /**
+     * 피처 변경 적용
+     */
+    function applyFeatureChange(change, isUndo = false) {
+    	const featureId = change.feature.getId();
+        if (!featureId) {
+            console.error('Feature ID is missing');
+            return;
+        }
+
+        const feature = editSource.getFeatureById(featureId);
+        if (!feature && change.type !== 'insert' && !(change.type === 'delete' && isUndo)) {
+            console.error('Feature not found:', featureId);
+            return;
+        }
+
+        switch(change.type) {
+	        case 'insert':
+	            if (isUndo) {
+	                if (feature) editSource.removeFeature(feature);
+	            } else {
+	                const newFeature = change.feature.clone();
+	                newFeature.setId(featureId);
+	                editSource.addFeature(newFeature);
+	            }
+	            break;
+	            
+	        case 'update':
+	            if (feature) {
+	                if (isUndo) {
+	                    feature.setGeometry(change.originalGeometry.clone());
+	                } else {
+	                    feature.setGeometry(change.feature.getGeometry().clone());
+	                }
+	                editSource.dispatchEvent('changefeature');
+	            }
+	            break;
+	            
+	        case 'delete':
+	            if (isUndo) {
+	                const restoredFeature = change.feature.clone();
+	                restoredFeature.setId(featureId);
+	                editSource.addFeature(restoredFeature);
+	            } else {
+	                if (feature) editSource.removeFeature(feature);
+	            }
+	            break;
+	    }
+    }
+
+/* =====================================================
+    Event Handlers
+======================================================*/
+    function handleEditStart() {
+        const elements = getElements();
+
+        // WFS 데이터 로드
+        loadLayerFeatures();
+
+        // UI 상태 업데이트
+        elements.startBtn.disabled = true;
+        
+        // 편집 컨트롤 활성화
+        elements.stopBtn.disabled = false;
+        elements.drawModeBtn.disabled = false;
+        elements.modifyModeBtn.disabled = false;
+        elements.deleteModeBtn.disabled = false;
+        
+        // Draw 모드로 시작
+        elements.drawModeBtn.checked = true;
+        setEditMode('draw');
+
+        // 변경사항이 있을 때만 저장/취소 버튼 활성화 (History 기반)
+        updateUIState();
+    }
+
+    function handleEditStop() {
+        const elements = getElements();
+        
+        if (history.changes.length > 0) {
+            // 변경사항이 있는 경우
+            elements.saveBtn.disabled = false;
+            elements.discardBtn.disabled = false;
+            elements.startBtn.disabled = true;
+        } else {
+            // 변경사항이 없는 경우
+            elements.startBtn.disabled = false;
+            elements.saveBtn.disabled = true;
+            elements.discardBtn.disabled = true;
+        }
+
+        // 편집 도구 비활성화
+        elements.stopBtn.disabled = true;
+        elements.drawModeBtn.disabled = true;
+        elements.modifyModeBtn.disabled = true;
+        elements.deleteModeBtn.disabled = true;
+        elements.undoBtn.disabled = true;
+        elements.redoBtn.disabled = true;
+        elements.editMode.forEach(radio => {
+            radio.checked = false;
+        });
+        
+        setEditMode(null);
+    }
+
+    function handleUndo() {
+        if (history.position >= 0) {
+            const change = history.changes[history.position];
+            applyFeatureChange(change, true);
+            history.position--;
+            updateUIState();
+        }
+    }
+
+    function handleRedo() {
+        if (history.position < history.changes.length - 1) {
+            history.position++;
+            const change = history.changes[history.position];
+            applyFeatureChange(change, false);
+            updateUIState();
+        }
+    }
+    
+    function handleDelete(event) {
+    	if (editMode === 'delete') {
+            const selected = event.selected[0];
+            if (selected) {
+                if (confirm('Remove selected feature?')) {
+                    const clonedFeature = selected.clone();
+                    clonedFeature.setId(selected.getId());
+                    addToHistory('delete', clonedFeature);
+                    editSource.removeFeature(selected);
+                }
+            }
+        }
+    }
+
+    function handleSave() {
+        if (history.undoStack.length === 0) {
+            _GL.COMMON.showToast('No changes to save', 'warning');
+            return;
+        }
+
+        sendWFSTransaction(history.undoStack)
+            .then(() => {
+                _GL.COMMON.showToast('Changes saved successfully', 'success');
+                resetEditState();
+            })
+            .catch(error => {
+                console.error('Save error:', error);
+                _GL.COMMON.showToast('Failed to save changes: ' + error.message, 'error');
+            });
+    }
+
+    function handleDiscard() {
+    	if (confirm('Discard all changes?')) {
+            history.undoStack = [];
+            history.redoStack = [];
+            editSource.clear();
+            loadLayerFeatures();
+            updateUIState();
+            _GL.COMMON.showToast('Changes discarded', 'info');
+        }
+    }
+
+/* =====================================================
+    Event Listeners
+======================================================*/
+    function initializeEventListeners() {
+        const elements = getElements();
+
+        // 편집 시작/종료
+        elements.startBtn.addEventListener('click', handleEditStart);
+        elements.stopBtn.addEventListener('click', handleEditStop);
+        
+        // Undo/Redo
+        elements.undoBtn.addEventListener('click', handleUndo);
+        elements.redoBtn.addEventListener('click', handleRedo);
+
+        // 편집 모드 변경
+        elements.drawModeBtn.addEventListener('change', () => setEditMode('draw'));
+        elements.modifyModeBtn.addEventListener('change', () => setEditMode('modify'));
+        elements.deleteModeBtn.addEventListener('change', () => setEditMode('delete'));
+        
+        // 저장/취소
+        elements.saveBtn.addEventListener('click', handleSave);
+        elements.discardBtn.addEventListener('click', handleDiscard);
+    }
+
+    // public API
+    return {
+        init: function() {
+            if (initialized) return;
+            instance = _GL.MAP.getInstance();
+            initializeUIState();
+            initializeEditLayer();
+            initializeInteractions();
+            initializeEventListeners();
+            initialized = true;
+        },
+        destroy: function() {
+            if (!initialized) return;
+            cleanup();
+            initialized = false;
+        }
+    };
+})();
+
+// DOM 로드 완료 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    _GL.MAP_EDIT.init();
+});

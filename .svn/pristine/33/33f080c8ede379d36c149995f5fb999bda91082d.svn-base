@@ -1,0 +1,191 @@
+_GL.ADMIN = (function () {
+    'use strict';
+
+    let initialized = false;
+    
+    function getElements() {
+        return {
+            roleTableBody: document.querySelector('#role-table-body'),
+            createModal: document.getElementById('createRoleModal'),
+            createButton: document.querySelector('.create-btn'),
+            cancelButton: document.getElementById('cancelCreateRole'),
+            closeModalButton: document.getElementById('closeCreateRoleModal'),
+            roleTitle: document.querySelector('.role-title'), 
+            saveCreateRoleButton: document.getElementById('saveCreateRole'), 
+            createRoleForm: document.getElementById('createRoleForm')       
+        };
+    }
+
+    function fetchRoleData() {
+        const elements = getElements();
+        if (!elements.roleTableBody) return;
+
+        elements.roleTableBody.innerHTML = `<tr><td colspan="6" class="text-center">Loading...</td></tr>`;
+
+        fetch('./role/list', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': _GL.csrf.token
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const roles = data.data || [];
+            elements.roleTableBody.innerHTML = '';
+
+            if (roles.length === 0) {
+                elements.roleTableBody.innerHTML = `<tr><td colspan="6" class="text-center">No results found.</td></tr>`;
+                return;
+            }
+
+            roles.forEach((role, index) => {
+                const row = `<tr data-group-name="${role.group_nm}">
+                    <td>${index + 1}</td>
+                    <td class="role-name clickable">${role.group_nm}</td>
+                    <td>${role.rgtr}</td>
+                    <td>${role.reg_dt}</td>
+                    <td>${role.mdfcn_dt}</td>
+                    <td><button class="btn btn-sm btn-primary edit-button" data-group-no="${role.group_no}">EDIT</button></td>
+                </tr>`;
+                elements.roleTableBody.insertAdjacentHTML('beforeend', row);
+            });
+        })
+        .catch(() => {
+            elements.roleTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Failed to load roles</td></tr>`;
+        });
+    }
+
+    function fetchAuthorityData(groupNo, groupName) {
+        fetch('./role/getInfo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': _GL.csrf.token
+            },
+            body: JSON.stringify({ group_no: groupNo })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const authorityList = data.data || [];
+            document.querySelectorAll('.role-checkbox').forEach(checkbox => {
+                let authryNo = parseInt(checkbox.getAttribute('data-authry-no'), 10);
+                checkbox.checked = authorityList.includes(authryNo);
+            });
+            const elements = getElements();
+            if (elements.roleTitle) {
+                elements.roleTitle.textContent = `Role - ${groupName}`;
+            }
+        });
+    }
+
+    function setupRoleListEvents() {
+        const elements = getElements();
+        if (!elements.roleTableBody) return;
+
+        elements.roleTableBody.addEventListener('click', function(e) {
+            const target = e.target;
+            if (target.classList.contains('edit-button') || target.classList.contains('role-name')) {
+                const row = target.closest('tr');
+                if (!row) return;
+
+                let groupNo = target.getAttribute('data-group-no');
+                if (!groupNo) {
+                    const editBtn = row.querySelector('.edit-button');
+                    if (editBtn) {
+                        groupNo = editBtn.getAttribute('data-group-no');
+                    }
+                }
+                const groupName = row.getAttribute('data-group-name') || row.cells[1].textContent;
+                if (groupNo) {
+                    fetchAuthorityData(groupNo, groupName);
+                }
+            }
+        });
+    }
+
+    function setupCreateModalEvent() {
+        const elements = getElements();
+
+        elements.createButton.addEventListener('click', () => {
+            elements.createModal.style.display = 'block';
+            elements.createModal.classList.add('show');
+        });
+
+        elements.closeModalButton.addEventListener('click', () => hideModal(elements.createModal));
+        elements.cancelButton.addEventListener('click', () => hideModal(elements.createModal));
+
+        window.addEventListener('click', (e) => {
+            if (e.target === elements.createModal) {
+                hideModal(elements.createModal);
+            }
+        });
+    }
+
+    function hideModal(modal) {
+        if (!modal) return;
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+    }
+
+    function setupCreateRoleSaveEvent() {
+        const elements = getElements();
+        if (!elements.saveCreateRoleButton || !elements.createRoleForm) return;
+
+        elements.saveCreateRoleButton.removeEventListener('click', handleCreateRoleSave);
+        elements.saveCreateRoleButton.addEventListener('click', handleCreateRoleSave);
+    }
+
+    function handleCreateRoleSave() {
+        const elements = getElements();
+        const roleNameInput = document.getElementById('createRoleName');
+        const registrantInput = document.getElementById('createRegistrantName');
+        if (!roleNameInput || !registrantInput) return;
+
+        const group_nm = roleNameInput.value.trim();
+        const rgtr = registrantInput.value.trim();
+        if (!group_nm || !rgtr) {
+            alert("You must enter the Role Name and Registrant Name");
+            return;
+        }
+
+        fetch('./role/insert', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': _GL.csrf.token
+            },
+            body: JSON.stringify({ group_nm, rgtr })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Create New Role');
+                hideModal(elements.createModal);
+                roleNameInput.value = '';
+                registrantInput.value = '';
+                fetchRoleData();
+            } else {
+                alert('그룹 생성 실패: ' + (data.message || '알 수 없는 오류'));
+            }
+        })
+        .catch(() => {
+            alert('역할 생성 중 오류가 발생했습니다. 관리자에게 문의하세요.');
+        });
+    }
+
+    function init() {
+        if (initialized) return;
+        setupCreateModalEvent();
+        setupRoleListEvents();
+        fetchRoleData();
+        setupCreateRoleSaveEvent();
+        initialized = true;
+    }
+
+    return { init };
+})();
+
+document.addEventListener('DOMContentLoaded', function () {
+    _GL.ADMIN.init();
+});

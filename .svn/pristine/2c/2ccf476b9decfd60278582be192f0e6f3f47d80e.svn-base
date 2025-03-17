@@ -1,0 +1,93 @@
+package egovframework.main.admin.role.controller;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import egovframework.common.response.ApiResponse;
+import egovframework.main.admin.role.dto.RoleDTO;
+import egovframework.main.admin.role.service.RoleService;
+
+@RestController
+@RequestMapping("/api/role")
+public class RoleController {
+    private static final Logger logger = LoggerFactory.getLogger(RoleController.class);
+    
+    @Resource(name = "roleService")
+    private RoleService roleService;
+    
+    // 페이징된 그룹 목록 조회
+    @GetMapping("/list/paged")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> selectPagedGroupAuthryList(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        try {
+            int offset = page * size;
+            
+            RoleDTO roleDTO = new RoleDTO();
+            roleDTO.setOffset(offset);
+            roleDTO.setSize(size);
+            
+            List<RoleDTO> roles = roleService.selectPagedGroupAuthryList(roleDTO);
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("roles", roles);
+            
+            return ApiResponse.success(result);
+        } catch (Exception e) {
+            logger.error("Error fetching paged roles", e);
+            return ApiResponse.error("Failed to fetch paged roles");
+        }
+    }
+    
+    // 그룹 생성
+    @PostMapping("/insert")
+    public ResponseEntity<ApiResponse<Void>> insertGroupAuthry(@RequestBody RoleDTO groupAuthry) {
+        try {
+            roleService.insertGroupAuthry(groupAuthry);
+            return ApiResponse.success("insert success");
+        } catch (Exception e) {
+            return ApiResponse.error("insert failed: " + e.getMessage());
+        }
+    }
+    
+    // 선택된 그룹의 권한 정보를 조회
+    @PostMapping("/getInfo")
+    public ResponseEntity<ApiResponse<List<Integer>>> selectAuthryInfo(@RequestBody Map<String, Object> params) {
+        try {
+            String groupNoStr = params.get("group_no").toString();
+            Integer groupNo = Integer.valueOf(groupNoStr);
+            List<Integer> authryList = roleService.selectAuthryInfo(groupNo);
+            return ApiResponse.success(authryList);
+        } catch (Exception e) {
+            logger.error("Error fetching authority info", e);
+            return ApiResponse.error("Failed to fetch authority info");
+        }
+    }
+    
+    // 선택된 그룹의 권한 정보를 업데이트
+    @PostMapping("/updateAuthList")
+    public ResponseEntity<ApiResponse<Void>> updateAuthList(@RequestBody Map<String, Object> params) {
+        try {
+            Integer groupNo = Integer.valueOf(params.get("group_no").toString());
+            @SuppressWarnings("unchecked")
+            List<Integer> authryNos = (List<Integer>) params.get("authry_nos");
+            roleService.updateAuthryList(groupNo, authryNos);
+            return ApiResponse.success("update success");
+        } catch (Exception e) {
+            return ApiResponse.error("update failed");
+        }
+    }
+}

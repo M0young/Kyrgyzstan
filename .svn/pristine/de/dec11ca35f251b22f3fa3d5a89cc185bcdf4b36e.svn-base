@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="activityDAO">
+    <!-- 사용자 로그 추가 -->
+    <insert id="insertUserLog" parameterType="ActivityDTO">
+	    INSERT INTO klums."user_log"
+	    (
+	        user_no,
+	        group_no,
+	        log_cd,
+	        log_level,
+	        msg
+	        <if test="ip != null and ip != ''">, ip</if>
+	    )
+	    VALUES
+	    (
+	        #{user_no},
+	        #{group_no},
+	        #{log_cd},
+	        #{log_level},
+	        #{msg}
+	        <if test="ip != null and ip != ''">, #{ip}</if>
+	    )
+	</insert>
+    
+    <!-- 사용자 로그 목록 조회 -->
+    <select id="selectUserLogList" parameterType="ActivityDTO" resultType="ActivityDTO">
+        SELECT
+            log_no,
+            log_cd,
+            log_level
+            msg,
+            reg_dt,
+            ip,
+        FROM klums."user_log"
+        WHERE user_no = #{user_no}
+        ORDER BY reg_dt DESC
+    </select>
+</mapper>

@@ -1,0 +1,46 @@
+package egovframework.main.admin.history.log.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import egovframework.main.admin.history.log.dao.LogDAO;
+import egovframework.main.admin.history.log.dto.LogDTO;
+import egovframework.rte.fdl.cmmn.EgovAbstractServiceImpl;
+
+@Service("logService")
+public class LogService extends EgovAbstractServiceImpl {
+	@Resource(name = "logDAO")
+    private LogDAO logDAO;
+    
+    public List<LogDTO> selectAllLogs() {
+        return logDAO.selectAllLogs();
+    }
+    
+    public List<LogDTO> selectLogsBySearch(String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("query", processedQuery);
+        return logDAO.selectLogsBySearch(params);
+    }
+    
+    public int countLogs(String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("query", processedQuery);
+        return logDAO.countLogs(params);
+    }
+    
+    public List<LogDTO> selectPagedLogs(int offset, int size, String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("offset", offset);
+        params.put("size", size);
+        params.put("query", processedQuery);
+        return logDAO.selectPagedLogs(params);
+    }
+}

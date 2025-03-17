@@ -1,0 +1,26 @@
+package egovframework.main.map.layer.service;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import egovframework.main.map.layer.dao.LayerDAO;
+import egovframework.main.map.layer.dto.LayerDTO;
+import egovframework.rte.fdl.cmmn.EgovAbstractServiceImpl;
+
+@Service("layerService")
+public class LayerService extends EgovAbstractServiceImpl {
+	
+	@Resource(name = "layerDAO")
+	private LayerDAO layerDAO;
+	
+	public List<LayerDTO> selectLanduseClassifications(String lang) {
+		return layerDAO.selectLanduseClassifications(lang);
+	}
+	
+	public List<LayerDTO> selectLandtypeClassifications(String lang) {
+		return layerDAO.selectLandtypeClassifications(lang);
+	}
+}

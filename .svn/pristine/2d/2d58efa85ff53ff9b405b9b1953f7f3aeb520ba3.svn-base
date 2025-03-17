@@ -1,0 +1,112 @@
+package egovframework.common.service;
+
+import javax.annotation.Resource;
+import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
+
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+
+@Service
+public class MailService {
+	
+    @Resource(name = "javaMailSender")
+    private JavaMailSender javaMailSender;
+    
+    // 메일 발송
+    private void sendHtmlEmail(String to, String subject, String htmlContent) throws MessagingException {
+        MimeMessage message = javaMailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+        helper.setFrom("tebu984@gmail.com");
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(htmlContent, true);
+
+        javaMailSender.send(message);
+    }
+    
+    // HTML template 생성
+    private String generateEmailTemplate(String title, String content) {
+        return String.format(
+            "<div style=\"font-family: 'Inter Var', -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, " +
+            "Helvetica Neue, sans-serif; max-width: 600px; margin: 0 auto;\">" +
+            "<div style=\"text-align: center; padding: 40px 20px 5px 20px; user-select: none;\">" +
+            "<img src=\"https://49.247.24.120/krgz/Images/logo.svg\" alt=\"KyrGeo\" style=\"width: 110px; height: 32px;\">" +
+            "</div>" +
+            "<div style=\"background-color: #ffffff; border: 1px solid #e6e7e9; border-radius: 4px; padding: 40px; margin: 20px;\">" +
+            "<div style=\"text-align: center; margin-bottom: 30px; user-select: none;\">" +
+            "<img src=\"https://49.247.24.120/krgz/Images/undraw_email.svg\" style=\"width: 300px;\">" +
+            "</div>" +
+            "<h2 style=\"color: #1e293b; text-align: center; margin-bottom: 24px; font-weight: 500;\">%s</h2>" +
+            "%s" +
+            "</div>" +
+            "<div style=\"text-align: center; color: #626976; font-size: 13px; padding: 20px;\">" +
+            "<p>&copy; 2024 KyrGeo. All rights reserved.</p>" +
+            "</div>" +
+            "</div>",
+            title, content
+        );
+    }
+    
+    // 메일인증 코드
+    public void sendVerificationCode(String email, String verificationCode) throws MessagingException {
+        String content = String.format(
+            "<div style=\"color: #626976; line-height: 1.5;\">" +
+            "<p>Hello,</p>" +
+            "<p>Please use the verification code below:</p>" +
+            "</div>" +
+            "<div style=\"background-color: #f8fafc; border-radius: 4px; padding: 16px; text-align: center; margin: 24px 0;\">" +
+            "<span style=\"font-family: 'Inter Var', sans-serif; color: #1e293b; font-size: 24px; font-weight: 600; letter-spacing: 2px;\">" +
+            "%s" +
+            "</span>" +
+            "</div>" +
+            "<p style=\"color: #626976; line-height: 1.5;\">This code will expire in 5 minutes.</p>" +
+            "<p style=\"color: #626976; font-size: 13px; text-align: center; margin-top: 24px; line-height: 1.5;\">" +
+            "If you didn't request this code, please ignore this email." +
+            "</p>",
+            verificationCode
+        );
+        
+        String htmlContent = generateEmailTemplate(
+            "Verification Code",
+            content
+        );
+        
+        sendHtmlEmail(email, "[KyrGeo] Verification Code", htmlContent);
+    }
+    
+    // 임시 비밀번호
+    public void sendTempPassword(String email, String tempPassword) throws MessagingException {
+        String content = String.format(
+            "<div style=\"color: #626976; line-height: 1.5;\">" +
+            "<p>Hello,</p>" +
+            "<p>Your temporary password has been issued. Please change your password after logging in for security purposes.</p>" +
+            "</div>" +
+            "<div style=\"background-color: #f8fafc; border-radius: 4px; padding: 16px; text-align: center; margin: 24px 0;\">" +
+            "<span style=\"font-family: 'Inter Var', sans-serif; color: #1e293b; font-size: 18px; font-weight: 600; letter-spacing: 1px;\">" +
+            "%s" +
+            "</span>" +
+            "</div>" +
+            "<div style=\"text-align: center; margin-top: 32px; user-select: none;\">" +
+            "<a href=\"http://localhost/klums/sign-in\" " +
+            "style=\"display: inline-block; background-color: #066FD1; color: white; " +
+            "padding: 12px 24px; text-decoration: none; border-radius: 4px; " +
+            "font-weight: 500;\">Sign in</a>" +
+            "</div>" +
+            "<p style=\"color: #626976; font-size: 13px; text-align: center; margin-top: 24px; line-height: 1.5;\">" +
+            "This email is for sending only.<br>" +
+            "If you have any questions, please contact customer service." +
+            "</p>",
+            tempPassword
+        );
+        
+        String htmlContent = generateEmailTemplate(
+            "Temporary Password Issued",
+            content
+        );
+        
+        sendHtmlEmail(email, "[KyrGeo] Temporary Password Issued", htmlContent);
+    }
+}

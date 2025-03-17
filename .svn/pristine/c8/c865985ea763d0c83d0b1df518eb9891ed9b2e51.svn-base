@@ -1,0 +1,67 @@
+package egovframework.main.admin.user.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import egovframework.main.admin.user.dao.AdminDAO;
+import egovframework.main.admin.user.dto.AdminDTO;
+import egovframework.rte.fdl.cmmn.EgovAbstractServiceImpl;
+
+@Service("adminService")
+public class AdminService extends EgovAbstractServiceImpl {
+   
+    @Resource(name = "adminDAO")
+    private AdminDAO adminDAO;
+
+    public List<AdminDTO> selectAllUsers() {
+        List<AdminDTO> users = adminDAO.selectAllUsers();
+        return users;
+    }
+    
+    public List<AdminDTO> selectUsersBySearch(String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) ? "%" + query.trim() + "%" : null;
+        return adminDAO.selectUsersBySearch(processedQuery);
+    }
+
+    public List<AdminDTO> selectPagedUsers(int offset, int size, String query) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("offset", offset);
+        params.put("size", size);
+
+        if (query != null && !query.trim().isEmpty()) {
+            params.put("query", "%" + query.trim().toLowerCase() + "%");
+        } else {
+            params.put("query", null);
+        }
+
+        return adminDAO.selectPagedUsers(params);
+    }
+    
+    public void updateUser(AdminDTO user) {
+        if (user.getEml() == null || user.getEml().isEmpty()) {
+            System.out.println("Email is missing in Service");
+        }
+        adminDAO.updateUser(user);
+    }
+    
+    public void deleteUser(String eml) {
+        if (eml == null || eml.isEmpty()) {
+            throw new IllegalArgumentException("Email cannot be null or empty");
+        }
+        adminDAO.deleteUser(eml);
+    }
+    
+    // 전체 사용자 수를 반환하는 메서드 추가
+    public int countAllUsers() {
+        return adminDAO.countAllUsers();
+    }
+    
+    public List<AdminDTO> selectUserGroups() {
+    	return adminDAO.selectUserGroups();
+    }
+}

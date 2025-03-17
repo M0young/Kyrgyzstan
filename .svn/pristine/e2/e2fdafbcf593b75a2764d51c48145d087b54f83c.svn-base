@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="layerDAO">
+    <select id="selectLanduseClassifications" parameterType="String" resultType="layerDTO">
+        SELECT DISTINCT
+            ls.sclsf_cd,
+            ll.lclsf_cd,
+            ll.lclsf_nm_${value} as lclsf_nm_${value},
+            ls.sclsf_nm_${value} as sclsf_nm_${value}
+        FROM data.land_use l
+        JOIN klums.land_lclsf ll ON l.lclsf_cd = ll.lclsf_cd
+        JOIN klums.land_sclsf ls ON l.sclsf_cd = ls.sclsf_cd
+        ORDER BY 1, 2
+    </select>
+    
+    <select id="selectLandtypeClassifications" parameterType="String" resultType="layerDTO">
+        SELECT DISTINCT
+            lt.type_cd,
+            lt.type_nm_${value} as type_nm_${value}
+        FROM data.land_use l
+        JOIN klums.land_type lt ON l.kategoria_ = lt.type_cd
+        ORDER BY 1, 2
+    </select>
+    
+    <select id="selectFieldLabelList" parameterType="String" resultType="layerDTO">
+	    SELECT 
+	        fld_nm,
+	        fld_label_${value}
+	    FROM 
+	        klums.land_fld
+	    ORDER BY 
+	        fld_nm
+	</select>
+    
+    <select id="selectLandTypeList" parameterType="String" resultType="layerDTO">
+	    SELECT 
+	        type_cd,
+	        type_nm_${value}
+	    FROM 
+	        klums.land_type
+	    ORDER BY 
+	        type_cd
+	</select>
+	
+	<select id="selectLandSymbolList" parameterType="String" resultType="layerDTO">
+	    SELECT 
+	        symbol_cd,
+	        symbol_nm_${value}
+	    FROM 
+	        klums.land_symbol
+	    WHERE
+	        del_yn = 'N'
+	    ORDER BY 
+	        symbol_cd
+	</select>
+	
+	<select id="selectLandLclsfList" parameterType="String" resultType="layerDTO">
+	    SELECT 
+	        lclsf_cd,
+	        lclsf_nm_${value}
+	    FROM 
+	        klums.land_lclsf
+	    ORDER BY 
+	        lclsf_cd
+	</select>
+	
+	<select id="selectLandSclsfList" parameterType="String" resultType="layerDTO">
+	    SELECT 
+	        sclsf_cd,
+	        sclsf_nm_${value}
+	    FROM 
+	        klums.land_sclsf
+	    ORDER BY 
+	        sclsf_cd
+	</select>
+</mapper>

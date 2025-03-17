@@ -1,0 +1,69 @@
+package egovframework.main.admin.code.type.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+
+import egovframework.environment.security.CustomUserDetails;
+import egovframework.main.admin.code.type.dao.TypeDAO;
+import egovframework.main.admin.code.type.dto.TypeDTO;
+import egovframework.rte.fdl.cmmn.EgovAbstractServiceImpl;
+
+@Service("typeService")
+public class TypeService extends EgovAbstractServiceImpl {
+    
+    @Resource(name = "typeDAO")
+    private TypeDAO typeDAO;
+    
+    public int countType(String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) 
+                                  ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("query", processedQuery);
+        return typeDAO.countType(params);
+    }
+    
+    public List<TypeDTO> selectPagedType(int offset, int size, String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) 
+                                  ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("offset", offset);
+        params.put("size", size);
+        params.put("query", processedQuery);
+        return typeDAO.selectPagedType(params);
+    }
+    
+    public void insertLandType(TypeDTO typeDTO) {
+        // 1) SecurityContextHolder에서 현재 로그인 사용자의 UserDetails를 가져옴
+        CustomUserDetails userDetails =
+            (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        // 2) UserDetails에서 user_no 추출
+        int currentUserNo = userDetails.getUserNo();
+        System.out.println("userDetail : " + userDetails);
+        System.out.println("eml : " + userDetails.getUsername());
+        System.out.println("GouprName : " + userDetails.getGroupName());
+        System.out.println("RealName : " + userDetails.getRealName());
+        System.out.println("User_no : " + userDetails.getUserNo());
+        System.out.println("others : " + userDetails.getAuthorities());
+
+        // 3) DTO에 rgtr 값 세팅
+        typeDTO.setRgtr(currentUserNo);
+
+        // 4) DAO 호출
+        typeDAO.insertLandType(typeDTO);
+    }
+    
+    public void updateType(TypeDTO typeDTO) {
+        typeDAO.updateType(typeDTO);
+    }
+    
+    public void deleteType(int type_cd) {
+        typeDAO.deleteType(type_cd);
+    }
+}

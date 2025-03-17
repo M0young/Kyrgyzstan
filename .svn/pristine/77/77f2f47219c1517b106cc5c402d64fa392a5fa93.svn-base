@@ -1,0 +1,46 @@
+package egovframework.main.admin.role.dao;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+
+import egovframework.main.admin.role.dto.RoleDTO;
+import egovframework.rte.psl.dataaccess.EgovAbstractMapper;
+
+@Repository("roleDAO")
+public class RoleDAO extends EgovAbstractMapper {
+    
+    public List<Integer> selectAuthryInfo(Integer groupNo) {
+        return selectList("roleDAO.selectAuthryInfo", groupNo);
+    }
+    
+    public List<RoleDTO> selectPagedGroupAuthryList(int offset, int size) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("offset", offset);
+        params.put("size", size);
+        return selectList("roleDAO.selectGroupAuthryList", params);
+    }
+    
+    public void insertGroupAuthry(RoleDTO roleDTO) {
+        insert("roleDAO.insertGroupAuthry", roleDTO);
+    }
+    
+    public void updateAuthryList(Integer groupNo, List<Integer> authryNos) {
+        // 기존 권한 삭제
+        delete("roleDAO.deleteAuthryByGroup", groupNo);
+        // 선택된 권한 삽입 (존재할 경우)
+        if (authryNos != null && !authryNos.isEmpty()) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("group_no", groupNo);
+            params.put("authryNos", authryNos);
+            insert("roleDAO.batchInsertAuthry", params);
+        }
+    }
+    
+    // user_group 테이블의 수정일(mdfcn_dt) 업데이트
+    public void updateAuthryDate(Integer groupNo) {
+        update("roleDAO.updateAuthryDate", groupNo);
+    }
+}

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xmlns:task="http://www.springframework.org/schema/task"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd
+        http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+    
+    <!-- 스케줄링 설정 활성화 -->
+    <task:annotation-driven />
+    
+    <!-- 컴포넌트 스캔 -->
+    <context:component-scan base-package="egovframework">
+       <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller" />
+    </context:component-scan>
+
+	<!-- 추적 로그 -->
+	<bean id="leaveaTrace" class="egovframework.rte.fdl.cmmn.trace.LeaveaTrace">
+        <property name="traceHandlerServices">
+            <list>
+                <ref bean="traceHandlerService" />
+            </list>
+        </property>
+    </bean>
+    <bean id="traceHandlerService" class="egovframework.rte.fdl.cmmn.trace.manager.DefaultTraceHandleManager">
+        <property name="reqExpMatcher">
+            <ref bean="antPathMater" />
+        </property>
+        <property name="patterns">
+            <list>
+                <value>*</value>
+            </list>
+        </property>
+        <property name="handlers">
+            <list>
+                <ref bean="defaultTraceHandler" />
+            </list>
+        </property>
+    </bean>
+    <bean id="antPathMater" class="org.springframework.util.AntPathMatcher" />
+    <bean id="defaultTraceHandler" class="egovframework.rte.fdl.cmmn.trace.handler.DefaultTraceHandler" />
+    
+    <!-- 파일 업로드 -->
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <property name="maxUploadSize" value="-1"/>
+        <property name="maxInMemorySize" value="-1"/>
+    </bean>
+	
+    <!-- 메일 설정 -->
+    <bean id="javaMailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+        <property name="defaultEncoding" value="UTF-8"/>
+        <property name="host" value="${Globals.mail.host}" />
+        <property name="port" value="${Globals.mail.port}" />
+        <property name="username" value="${Globals.mail.username}" />
+        <property name="password" value="${Globals.mail.password}" />
+        <property name="javaMailProperties">
+            <props>
+                <prop key="mail.transport.protocol">smtp</prop>
+	            <prop key="mail.smtp.auth">true</prop>
+	            <prop key="mail.smtp.ssl.enable">true</prop> 
+	            <prop key="mail.smtp.ssl.trust">smtp.gmail.com</prop> 
+	            <prop key="mail.smtp.ssl.protocols">TLSv1.2</prop>
+	            <prop key="mail.smtp.connectiontimeout">30000</prop>  <!-- 연결 대기 -->
+				<prop key="mail.smtp.timeout">30000</prop>            <!-- 응답 대기 -->
+				<prop key="mail.smtp.writetimeout">30000</prop>       <!-- 전송 대기 -->
+            </props>
+        </property>
+    </bean>
+
+    <!-- 프로퍼티 설정 -->
+    <util:properties id="globalProperties" location="classpath:/egovframework/egovProps/globals-dev.properties"/>
+</beans>

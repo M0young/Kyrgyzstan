@@ -1,0 +1,84 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib uri="http://www.springframework.org/tags" prefix="spring" %>
+<!DOCTYPE html>
+<html lang="en">
+<c:set var="pageFolder" value="user"/>
+<c:set var="pageCss" value="sign-in"/>
+<%@ include file="/WEB-INF/pages/common/layout/main-head.jsp" %>
+<body class="d-flex flex-column">
+    <script src="${path}/resources/js/common/tabler/demo-theme.min.js"></script>
+	<div class="page page-center">
+		<%@ include file="/WEB-INF/pages/common/layout/main-body.jsp"%>
+		<div class="container mt-auto">
+			<div class="row align-items-center g-4">
+				<div class="col-lg">
+					<div class="container-tight">
+						<div class="text-center mb-4">
+							<a href="./" class="navbar-brand navbar-brand-autodark"><img src="${path}/resources/images/logo.svg" height=36 alt="KyrGeo"></a>
+						</div>
+						<div class="card card-md">
+							<div class="card-body">
+								<h2 class="h2 text-center mb-4">Login to your account</h2>
+								<form action="${path}/login" method="post" autocomplete="off">
+									<div class="mb-3">
+										<label class="form-label">Email address</label>
+										<input type="email" name="username" class="form-control" placeholder="your@email.com" autocomplete="off" required>
+									</div>
+									<div class="mb-3">
+										<label class="form-label">Password</label>
+										<div class="input-group input-group-flat">
+											<input type="password" id="loginPassword" name="password" class="form-control" placeholder="Your password" autocomplete="off" required>
+											<input type="hidden" name="_csrf" value="${_csrf.token}">
+											<span class="input-group-text">
+												<a href="#" class="link-secondary" id="togglePassword" data-bs-toggle="tooltip" aria-label="Show password" data-bs-original-title="Show password">
+													<img src="${path}/resources/images/eye-off.svg" height="18">
+												</a>
+											</span>
+										</div>
+									</div>
+									<div class="mb-2">
+										<label class="form-check d-flex">
+											<input type="checkbox" name="remember" class="form-check-input">
+											<span class="form-check-label ms-25">Remember me on this device</span>
+											<span class="form-label-description ms-auto">
+												<a href="./forgot-password">I forgot password</a>
+											</span>
+										</label>
+									</div>
+									<c:if test="${not empty sessionScope.errorMessage}">
+										<div class="alert alert-danger alert-dismissible" role="alert">
+											<spring:message code="${sessionScope.errorMessage}" />
+											<a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+										</div>
+										<% session.removeAttribute("errorMessage"); %>
+									</c:if>
+									<div class="form-footer">
+										<button type="submit" class="btn btn-primary w-100">Sign in</button>
+									</div>
+								</form>
+							</div>
+						</div>
+						<div class="text-center text-secondary mt-3">
+							Don't have account yet? <a href="./sign-up" tabindex="-1">Sign up</a>
+						</div>
+					</div>
+				</div>
+				<div class="col-lg d-none d-lg-block">
+					<div class="bg-cover h-100" style="background-image: url(${path}/resources/images/newjeanz.jpg); min-height: 40vh; border-radius: 6px;"></div>
+				</div>
+			</div>
+		</div>
+		<div class="text-center mb-3 mt-auto">
+	        <ul class="list-inline list-inline-dots">
+	            <li class="list-inline-item text-muted">
+	                Copyright © 2025 <a href="./" class="link-secondary">Kyrgyzstan Land Use Management System</a>. All rights reserved.
+	            </li>
+	        </ul>
+	    </div>
+	</div>
+	<script src="${path}/resources/js/main/user/auth.js"></script>
+    <script src="${path}/resources/js/common/tabler/tabler.min.js" defer></script>
+    <script src="${path}/resources/js/common/tabler/demo.min.js" defer></script>
+</body>
+</html>

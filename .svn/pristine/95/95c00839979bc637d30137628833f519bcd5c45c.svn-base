@@ -1,0 +1,21 @@
+package egovframework.main.admin.role.service;
+
+import java.util.List;
+
+public interface RoleService {
+	
+    List<RoleVO> selectGroupAuthryList(String groupNo);
+    
+    RoleVO selectAuthryInfo(String authryCode);
+    
+    void insertGroupAuthry(RoleVO roleVO);
+    
+    void updateGroupAuthry(RoleVO roleVO);
+    
+    void deleteGroupAuthry(RoleVO roleVO);
+    
+    void deleteAllGroupAuthry(String groupNo);
+    
+    boolean hasAuthry(String groupNo, String roleCode);
+    
+}

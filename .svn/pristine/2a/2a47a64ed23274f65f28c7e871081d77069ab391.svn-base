@@ -1,0 +1,10 @@
+package egovframework.main.map.region.service;
+
+import java.util.List;
+
+public interface RegionService {
+
+	List<?> selectRegionList(RegionVO regionVO);
+	
+	int selectRegionListCount(RegionVO regionVO);
+}

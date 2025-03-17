@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="shapefileDAO">
+    <!-- 테이블 생성 -->
+    <update id="createShapefileTable" parameterType="int">
+	    CREATE TABLE IF NOT EXISTS data.land_use (
+	    	gid SERIAL,
+	        ink varchar,
+	        ink_1 varchar(255),
+	        coate_raio varchar(255),
+	        name_raion varchar(255),
+	        coate_aa varchar(255),
+	        name_aa varchar(255),
+	        nomer_kont int,
+	        staryi_nom int,
+	        vid_ugodii varchar(255),
+	        uslcode int,
+	        ispolzovan varchar(255),
+	        opisanie varchar(255),
+	        primechani varchar(255), 
+	        kategoria_ int,
+	        kolichestv int,
+	        obshay_plo float8,
+	        ploshad_or float8,
+	        lclsf_cd int,
+	        sclsf_cd int,
+	        cnt float8,
+	        kdar float8,
+	        geom public.geometry(Geometry, ${value}),
+	        CONSTRAINT land_use_pk PRIMARY KEY (gid),
+	        CONSTRAINT land_use_fk1 FOREIGN KEY (uslcode) REFERENCES klums.land_symbol(symbol_cd),
+	        CONSTRAINT land_use_fk2 FOREIGN KEY (kategoria_) REFERENCES klums.land_type(type_cd)
+	    )
+	</update>
+
+	<!-- 데이터 삽입 -->
+	<insert id="insertShapefileData" parameterType="map">
+	    INSERT INTO data.land_use
+		(
+		    "ink", "coate_raio", "name_raion", "coate_aa", "name_aa", "nomer_kont",
+		    "staryi_nom", "vid_ugodii", "uslcode", "ispolzovan", "opisanie",
+		    "primechani", "kategoria_", "kolichestv", "obshay_plo", "ploshad_or",
+		    "lclsf_cd", "sclsf_cd", "cnt", "kdar", "geom"
+		)
+		VALUES 
+		(
+		    #{layer.ink}, #{layer.coate_raio}, #{layer.name_raion}, #{layer.coate_aa}, #{layer.name_aa}, #{layer.nomer_kont},
+		    #{layer.staryi_nom}, #{layer.vid_ugodii}, #{layer.uslcode}, #{layer.ispolzovan}, #{layer.opisanie},
+		    #{layer.primechani}, #{layer.kategoria_}, #{layer.kolichestv}, #{layer.obshay_plo}, #{layer.ploshad_or},
+		    #{layer.lclsf_cd}, #{layer.sclsf_cd}, #{layer.cnt}, #{layer.kdar}, ST_GeomFromText(#{layer.geom}, #{coord})
+		)
+		<!-- ON CONFLICT ("ink")
+		DO UPDATE SET
+		    "coate_raio" = #{layer.coate_raio},
+		    "name_raion" = #{layer.name_raion},
+		    "coate_aa" = #{layer.coate_aa},
+		    "name_aa" = #{layer.name_aa},
+		    "nomer_kont" = #{layer.nomer_kont},
+		    "staryi_nom" = #{layer.staryi_nom},
+		    "vid_ugodii" = #{layer.vid_ugodii},
+		    "uslcode" = #{layer.uslcode},
+		    "ispolzovan" = #{layer.ispolzovan},
+		    "opisanie" = #{layer.opisanie},
+		    "primechani" = #{layer.primechani},
+		    "kategoria_" = #{layer.kategoria_},
+		    "kolichestv" = #{layer.kolichestv},
+		    "obshay_plo" = #{layer.obshay_plo},
+		    "ploshad_or" = #{layer.ploshad_or},
+		    "lclsf_cd" = #{layer.lclsf_cd},
+		    "sclsf_cd" = #{layer.sclsf_cd},
+		    "cnt" = #{layer.cnt},
+		    "kdar" = #{layer.kdar},
+		    "geom" = ST_GeomFromText(#{layer.geom}, #{coord}) -->
+	</insert>
+	
+	<!-- 테이블을 백업으로 복사 -->
+	<update id="copyTableToBackup" parameterType="String">
+	    CREATE TABLE backup.${value} AS 
+	    SELECT * FROM data.land_use;
+	    ALTER TABLE backup.${value} ADD CONSTRAINT land_use_pk PRIMARY KEY (gid);
+	    ALTER TABLE backup.${value} ADD CONSTRAINT ${value}_fk1 FOREIGN KEY (uslcode) REFERENCES klums.land_symbol(symbol_cd);
+	    ALTER TABLE backup.${value} ADD CONSTRAINT ${value}_fk2 FOREIGN KEY (kategoria_) REFERENCES klums.land_type(type_cd);
+	</update>
+
+	<!-- 테이블을 백업으로 이동 -->
+	<update id="moveTableToBackup" parameterType="String">
+		ALTER TABLE data.land_use DROP CONSTRAINT IF EXISTS land_use_pk;
+		ALTER TABLE data.land_use DROP CONSTRAINT IF EXISTS land_use_fk1;
+		ALTER TABLE data.land_use DROP CONSTRAINT IF EXISTS land_use_fk2;
+		ALTER TABLE data.land_use ADD CONSTRAINT ${value}_pk PRIMARY KEY (gid);
+		ALTER TABLE data.land_use ADD CONSTRAINT ${value}_fk1 FOREIGN KEY (uslcode) REFERENCES klums.land_symbol(symbol_cd);
+		ALTER TABLE data.land_use ADD CONSTRAINT ${value}_fk2 FOREIGN KEY (kategoria_) REFERENCES klums.land_type(type_cd);
+		ALTER TABLE data.land_use SET SCHEMA backup;
+		ALTER TABLE backup.land_use RENAME TO ${value};
+	</update>
+
+	<!-- 토지 이용 유형 코드 조회 -->
+	<select id="selectLandUseTypeCode" parameterType="ShapefileDTO" resultType="ShapefileDTO">
+	    SELECT lclsf_cd, sclsf_cd FROM klums.land_sclsf
+	    WHERE fld_nm = #{fld_nm}
+	</select>
+	
+  	<!-- 테이블 존재 여부 확인 -->
+	<select id="checkTableExists" parameterType="String" resultType="int">
+	    SELECT CASE 
+	        WHEN EXISTS (
+	            SELECT 1 
+	            FROM information_schema.tables 
+	            WHERE table_schema = 'data' 
+	            AND table_name = 'land_use'
+	        ) 
+	        THEN 1 
+	        ELSE 0 
+	    END
+	</select>
+
+ 	<!-- 레이어의 SRID 조회 -->
+    <select id="selectSridFromExistLayer" parameterType="String" resultType="int">
+	    SELECT CASE 
+	        WHEN EXISTS (
+	            SELECT 1 
+	            FROM information_schema.tables 
+	            WHERE table_schema = 'data' 
+	            AND table_name = 'land_use'
+	        )
+	        THEN (
+	            SELECT ST_SRID(geom)
+	            FROM data.land_use
+	            LIMIT 1
+	        )
+	        ELSE 0
+	    END AS srid
+	</select>
+</mapper>

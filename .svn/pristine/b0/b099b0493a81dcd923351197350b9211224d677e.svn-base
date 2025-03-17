@@ -1,0 +1,63 @@
+package egovframework.common.exception;
+
+import java.io.IOException;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+import egovframework.common.response.ApiResponse;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+    
+    // 이메일 인증 
+    @ExceptionHandler(EmailVerificationException.class)
+    public ResponseEntity<ApiResponse<Object>> handleEmailVerificationException(EmailVerificationException e) {
+        return ApiResponse.error(e.getMessageCode());
+    }
+    
+    // Shapefile 유효성 검사
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Object>> handleIllegalArgumentException(IllegalArgumentException e) {
+        return ApiResponse.error("Invalid input parameter");
+    }
+    
+    //
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Object>> handleIllegalStateException(IllegalStateException e) {
+        return ApiResponse.error("Invalid state");
+    }
+    
+    // IOException
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<ApiResponse<Object>> handleIOException(IOException e) {
+        return ApiResponse.error("File processing failed");
+    }
+    
+    // Exception
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Object>> handleUnexpectedException(Exception e) {
+        return ApiResponse.error("An unexpected error occurred");
+    }
+    
+    public static class EmailVerificationException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+        
+        private final String messageCode;
+        
+        public static final String EMAIL_DUPLICATE = "auth.validation.email.duplicate";
+        public static final String EMAIL_NOT_FOUND = "auth.password.email.notfound";
+        public static final String TOO_MANY_ATTEMPTS = "auth.verification.limit";
+        public static final String VERIFICATION_FAILED = "auth.verification.failed";
+        
+        public EmailVerificationException(String messageCode) {
+            super(messageCode);
+            this.messageCode = messageCode;
+        }
+        
+        public String getMessageCode() {
+            return messageCode;
+        }
+    }
+}

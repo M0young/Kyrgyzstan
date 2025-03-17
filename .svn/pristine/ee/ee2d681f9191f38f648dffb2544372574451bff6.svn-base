@@ -1,0 +1,116 @@
+package egovframework.main.user.auth.service;
+
+import java.security.SecureRandom;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Resource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+
+import egovframework.common.service.MailService;
+import egovframework.environment.network.NetworkUtil;
+import egovframework.common.exception.GlobalExceptionHandler.EmailVerificationException;
+import egovframework.main.user.auth.service.AuthService;
+import egovframework.main.user.auth.dto.AuthDTO;
+
+@Service
+public class EmailVerificationService {
+	private static final Logger logger = LoggerFactory.getLogger(EmailVerificationService.class);
+    private static final String EMAIL_VERIFICATION_PREFIX = "email:verify:";
+    private static final String IP_VERIFICATION_PREFIX = "ip:verify:";
+    private static final String ATTEMPT_COUNT_SUFFIX = ":attempt";
+    private static final long VERIFICATION_TTL = 300; // 5분
+    private static final long BLOCK_TTL = 1800; // 30분
+    private static final int MAX_ATTEMPTS = 5;
+    
+    @Resource(name = "redisTemplate")
+    private RedisTemplate<String, String> redisTemplate;
+    
+    @Resource(name = "mailService")
+    private MailService mailService;
+    
+    @Resource(name = "authService")
+	private AuthService authService;
+    
+    @Resource(name = "passwordService")
+	private PasswordService passwordService;
+    
+    public void sendEmailVerificationCode(String email) throws Exception {
+        AuthDTO user = authService.selectUserByEmail(email);
+        if (user != null) {
+            throw new EmailVerificationException(EmailVerificationException.EMAIL_DUPLICATE);
+        }
+        
+        // IP 시도 횟수 체크
+        String ip = NetworkUtil.getCurrentIpAddress();
+        String ipAttemptKey = IP_VERIFICATION_PREFIX + ip + ATTEMPT_COUNT_SUFFIX;
+        String ipAttemptCount = redisTemplate.opsForValue().get(ipAttemptKey);
+        if (ipAttemptCount != null && Integer.parseInt(ipAttemptCount) >= MAX_ATTEMPTS) {
+            throw new EmailVerificationException(EmailVerificationException.TOO_MANY_ATTEMPTS);
+        }
+        
+        // 이메일 시도 횟수 체크  
+        String emailAttemptKey = EMAIL_VERIFICATION_PREFIX + email + ATTEMPT_COUNT_SUFFIX;
+        String emailAttemptCount = redisTemplate.opsForValue().get(emailAttemptKey);
+        if (emailAttemptCount != null && Integer.parseInt(emailAttemptCount) >= MAX_ATTEMPTS) {
+            throw new EmailVerificationException(EmailVerificationException.TOO_MANY_ATTEMPTS);
+        }
+
+        // 인증 코드 생성 및 저장
+        String verificationCode = String.format("%06d", new SecureRandom().nextInt(888888) + 111111);
+        String codeKey = EMAIL_VERIFICATION_PREFIX + email;
+        redisTemplate.opsForValue().set(codeKey, verificationCode, VERIFICATION_TTL, TimeUnit.SECONDS);
+        logger.info("Verification code sent: email={}, code={}", email, verificationCode);
+
+        incrementAttemptCount(ipAttemptKey);
+        incrementAttemptCount(emailAttemptKey);
+        
+        mailService.sendVerificationCode(email, verificationCode);
+    }
+
+    // 시도 횟수 증가
+    private void incrementAttemptCount(String attemptKey) {
+        String attemptCount = redisTemplate.opsForValue().get(attemptKey);
+        if (attemptCount == null) {
+            redisTemplate.opsForValue().set(attemptKey, "1", VERIFICATION_TTL, TimeUnit.SECONDS);
+        } else {
+            int count = Integer.parseInt(attemptCount) + 1;
+            if (count >= MAX_ATTEMPTS) {
+                redisTemplate.opsForValue().set(attemptKey, String.valueOf(count), BLOCK_TTL, TimeUnit.SECONDS);
+            } else {
+                redisTemplate.opsForValue().set(attemptKey, String.valueOf(count), VERIFICATION_TTL, TimeUnit.SECONDS);
+            }
+        }
+    }
+    
+    // 코드 검증
+    public boolean verifyCode(String email, String code) {
+        String codeKey = EMAIL_VERIFICATION_PREFIX + email;
+        String storedCode = redisTemplate.opsForValue().get(codeKey);
+        logger.info("Verification attempt: email={}, input_code={}, stored_code={}", email, code, storedCode);
+        if (storedCode != null && storedCode.equals(code)) {
+            // 인증 성공시 관련 데이터 삭제
+            redisTemplate.delete(codeKey);
+            redisTemplate.delete(EMAIL_VERIFICATION_PREFIX + email + ATTEMPT_COUNT_SUFFIX);
+            return true;
+        }
+        return false;
+    }
+    
+    public void sendEmailTempPassword(String email) throws Exception {
+        AuthDTO auth = authService.selectUserByEmail(email);
+        if(auth == null) {
+            throw new EmailVerificationException(EmailVerificationException.EMAIL_NOT_FOUND);
+        }
+        
+        String tempPassword = passwordService.generateTempPassword();
+        auth.setPwd(passwordService.encryptPassword(tempPassword));
+        authService.updateTempPassword(auth);
+        logger.info("Temporary password issued: email={}, temp_password={}", email, tempPassword);
+        
+        mailService.sendTempPassword(email, tempPassword);
+    }
+}

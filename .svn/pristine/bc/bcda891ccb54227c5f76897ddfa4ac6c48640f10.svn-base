@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="typeDAO">
+    
+    <!-- 전체 로그 조회 -->
+    <select id="selectAllType" resultType="TypeDTO">
+        SELECT 
+            type_cd,
+            type_nm_en,
+            type_nm_ky,
+            type_nm_ru,
+            rmrk
+        FROM 
+            klums.land_type
+	    WHERE 
+		    del_yn = 'N'
+        ORDER BY type_cd asc
+    </select>
+    
+    <!-- 검색 조건에 따른 로그 조회 -->
+    <select id="selectTypeBySearch" parameterType="map" resultType="TypeDTO">
+        SELECT 
+            type_cd,
+            type_nm_en,
+            type_nm_ky,
+            type_nm_ru,
+            rmrk
+        FROM 
+            klums.land_type
+        WHERE 1=1
+        <if test="query != null and query != ''">
+            AND (CAST(type_cd AS TEXT) ILIKE #{query} OR type_nm_en ILIKE #{query} OR type_nm_ky ILIKE #{query} OR type_nm_ru ILIKE #{query} OR rmrk ILIKE #{query})
+        </if>
+    </select>
+    
+    <!-- 전체 로그 수 조회 (검색 포함) -->
+    <select id="countType" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM klums.land_type
+   	    WHERE del_yn = 'N'
+    </select>
+    
+    <!-- 페이징된 로그 조회 -->
+	<select id="selectPagedType" parameterType="map" resultType="TypeDTO">
+	    SELECT 
+	        type_cd,
+	        type_nm_en,
+	        type_nm_ky,
+	        type_nm_ru,
+	        rmrk
+	    FROM 
+	        klums.land_type
+	    WHERE 
+	        del_yn = 'N'
+	    <if test="query != null and query != ''">
+	        AND (CAST(type_cd AS TEXT) ILIKE #{query} 
+	            OR type_nm_en ILIKE #{query} 
+	            OR type_nm_ky ILIKE #{query} 
+	            OR type_nm_ru ILIKE #{query} 
+	            OR rmrk ILIKE #{query})
+	    </if>
+	    ORDER BY type_cd asc
+	    LIMIT #{size} OFFSET #{offset}
+	</select>
+
+	
+	<!-- 토지 유형 생성 -->
+	<insert id="insertLandType" parameterType="TypeDTO">
+	    INSERT INTO klums.land_type (
+	        type_cd,
+	        type_nm_en,
+	        type_nm_ky,
+	        type_nm_ru,
+	        rmrk
+	    ) VALUES (
+	        #{type_cd},
+	        #{type_nm_en},
+	        #{type_nm_ky},
+	        #{type_nm_ru},
+	        #{rmrk}
+	    )
+	</insert>
+    
+    <!-- 토지유형 업데이트 -->
+    <update id="updateType" parameterType="TypeDTO">
+    	UPDATE klums.land_type
+    	SET
+    		type_nm_en = #{type_nm_en},
+    		type_nm_ky = #{type_nm_ky},
+    		type_nm_ru = #{type_nm_ru},
+    		rmrk = #{rmrk}
+    	WHERE
+    		type_cd = #{type_cd}
+    </update>
+    
+    
+    <!-- 사용자 삭제 -->
+    <update id="deleteType" parameterType="int">
+    	UPDATE klums."land_type"
+    	SET
+    		del_yn = 'Y'
+    	WHERE
+    		type_cd = #{type_cd}
+    </update>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</mapper>

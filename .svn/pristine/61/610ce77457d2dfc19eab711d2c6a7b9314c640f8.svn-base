@@ -1,0 +1,26 @@
+package egovframework.main.admin.upload.shapefile.service;
+
+import java.util.Map;
+import java.io.File;
+
+import egovframework.main.admin.upload.progress.service.ProgressVO;
+
+public interface ShapefileService {
+	
+   int createShapefileTable(Map<String, Object> params);
+   
+   int insertShapefileData(Map<String, Object> params);
+   
+   ShapefileVO selectLandUseTypeCode(ShapefileVO ShapefileVO);
+   
+   int copyTableToBackup(Map<String, Object> params);
+   
+   int moveTableToBackup(Map<String, Object> params);
+   
+   boolean checkTableExists(String mapType);
+   
+   int selectSridFromExistLayer(String mapType);
+   
+   void processShapefileWithTransaction(File shpFile, String mapType, String layerProcess, int coord, ProgressVO progressVO);
+   
+}

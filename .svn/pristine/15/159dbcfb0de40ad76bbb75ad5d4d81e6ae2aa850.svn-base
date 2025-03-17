@@ -1,0 +1,219 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<!DOCTYPE html>
+<html lang="en">
+<c:set var="pageFolder" value="admin"/>
+<c:set var="pageCss" value="user"/>
+<%@ include file="/WEB-INF/pages/common/layout/main-head.jsp"%>
+<!-- remark 셀에 대해 최대 너비와 줄임표(...) 처리 -->
+<style>
+  .remark {
+    max-width: 150px; /* 필요에 따라 조정 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+</style>
+<body class="d-flex flex-column">
+  <script src="${path}/resources/js/common/tabler/demo-theme.min.js"></script>
+    <%@ include file="/WEB-INF/pages/common/layout/main-header.jsp" %>
+    <div class="page-admin">
+      <!-- Sidebar -->
+      <%@ include file="/WEB-INF/pages/main/admin/view.jsp" %>
+
+      <div class="page-wrapper">
+        <!-- Page header -->
+        <div class="page-header d-print-none">
+          <div class="container-xl">
+            <div class="row g-2 align-items-center">
+              <div class="col">
+                <!-- Page pre-title -->
+                <h2 class="page-title">Code Management > Land Use Subclassification</h2>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="page-body">
+		  <div class="container-xl">
+		    <div class="card">
+				<div class="card-header d-flex justify-content-between align-items-center">
+				    <div class="input-group">
+				        <label for="search-input" class="visually-hidden">Search</label>
+				        <input type="text" id="search-input" name="search" class="form-control" placeholder="Search" aria-label="Search">
+				        <button id="search-btn" class="btn btn-primary" type="button">
+				        	<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-zoom"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
+				        </button>
+				    </div>
+				    <div>
+				      <span class="text-muted">Total: 10</span>
+				      <button class="btn btn-primary create-btn">Create</button>
+				    </div>
+				</div>
+		      <div class="card-body p-0">
+		        <table class="table table-bordered table-hover">
+		          <thead>
+		            <tr>
+		              <th>No</th>
+		              <th>Code</th>
+		              <th>SubClassification English</th>
+		              <th>SubClassification Kirghiz</th>
+		              <th>SubClassification Russian</th>
+		              <th>remark</th>
+		              <th>Edit</th>
+		            </tr>
+		          </thead>
+		          <tbody id="class-table-body">
+				  	<tr>
+						<td>1</td>
+						<td>Code1</td>
+						<td>irrigated land</td>
+						<td>сугарылган</td>
+						<td>орошаемых</td>
+						<td class="remark" 
+						    data-bs-toggle="tooltip" 
+						    data-bs-placement="top" 
+						    title="This is a very long remark text that is supposed to be truncated in the table view but fully visible when hovered over. It contains detailed description of the land use subclassification and additional metadata.">
+              This is a very long remark text that is supposed to be truncated...
+            </td>
+						<td><button class="btn btn-sm btn-primary edit-button">EDIT</button></td>
+					</tr>
+					<tr>
+						<td>2</td>
+						<td>Code2</td>
+						<td>rainfed arable land</td>
+						<td>lбогар</td>
+						<td>богарных</td>
+						<td class="remark" 
+						    data-bs-toggle="tooltip" 
+						    data-bs-placement="top" 
+						    title="This is a very long remark text that is supposed to be truncated in the table view but fully visible when hovered over. It contains detailed description of the land use subclassification and additional metadata.">
+              This is a very long remark text that is supposed to be truncated...
+            </td>
+						<td><button class="btn btn-sm btn-primary edit-button">EDIT</button></td>
+					</tr>
+					<tr>
+						<td>3</td>
+						<td>Code3</td>
+						<td>including irrigated areas</td>
+						<td>анын ичинде сугат</td>
+						<td>including irrigated areas</td>
+						<td class="remark" 
+						    data-bs-toggle="tooltip" 
+						    data-bs-placement="top" 
+						    title="This is a very long remark text that is supposed to be truncated in the table view but fully visible when hovered over. It contains detailed description of the land use subclassification and additional metadata.">
+              This is a very long remark text that is supposed to be truncated...
+            </td>
+						<td><button class="btn btn-sm btn-primary edit-button">EDIT</button></td>
+					</tr>
+					<tr>
+						<td>4</td>
+						<td>Code4</td>
+						<td>orchards</td>
+						<td>бакча астында</td>
+						<td>в т. ч. орошаемые</td>
+						<td class="remark" 
+						    data-bs-toggle="tooltip" 
+						    data-bs-placement="top" 
+						    title="This is a very long remark text that is supposed to be truncated in the table view but fully visible when hovered over. It contains detailed description of the land use subclassification and additional metadata.">
+              This is a very long remark text that is supposed to be truncated...
+            </td>
+						<td><button class="btn btn-sm btn-primary edit-button">EDIT</button></td>
+					</tr>
+					<tr>
+						<td>5</td>
+						<td>Code5</td>
+						<td>lirrigated land</td>
+						<td>бакчалардагы сугарылган аянттар</td>
+						<td>lорошаемые участки под садами</td>
+						<td class="remark" 
+						    data-bs-toggle="tooltip" 
+						    data-bs-placement="top" 
+						    title="This is a very long remark text that is supposed to be truncated in the table view but fully visible when hovered over. It contains detailed description of the land use subclassification and additional metadata.">
+              This is a very long remark text that is supposed to be truncated...
+            </td>
+						<td><button class="btn btn-sm btn-primary edit-button">EDIT</button></td>
+					</tr>
+					<tr>
+						<td>6</td>
+						<td>Code6</td>
+						<td>berry fields</td>
+						<td>жомок бакчаларда</td>
+						<td>под ягодниками</td>
+						<td class="remark" 
+						    data-bs-toggle="tooltip" 
+						    data-bs-placement="top" 
+						    title="This is a very long remark text that is supposed to be truncated in the table view but fully visible when hovered over. It contains detailed description of the land use subclassification and additional metadata.">
+              This is a very long remark text that is supposed to be truncated...
+            </td>
+						<td><button class="btn btn-sm btn-primary edit-button">EDIT</button></td>
+					</tr>
+					<tr>
+						<td>7</td>
+						<td>Code7</td>
+						<td>vineyards</td>
+						<td>жүзүм бакчаларында</td>
+						<td>под виноградниками</td>
+						<td class="remark" 
+						    data-bs-toggle="tooltip" 
+						    data-bs-placement="top" 
+						    title="This is a very long remark text that is supposed to be truncated in the table view but fully visible when hovered over. It contains detailed description of the land use subclassification and additional metadata.">
+              This is a very long remark text that is supposed to be truncated...
+            </td>
+						<td><button class="btn btn-sm btn-primary edit-button">EDIT</button></td>
+					</tr>
+				  </tbody>
+		        </table>
+		      </div>
+				<div class="card-footer d-flex justify-content-center">
+				    <nav>
+				        <ul class="pagination">
+				            <!-- Previous 버튼 -->
+				            <li class="page-item disabled">
+				                <a class="page-link" href="#" id="prev-page" tabindex="-1" aria-disabled="true">
+				                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1"><path d="M15 6l-6 6l6 6"></path></svg>
+				                    prev
+				                </a>
+				            </li>
+				
+				            <!-- 페이지 번호 동적으로 삽입 -->
+				            <span id="pagination-numbers"></span>
+							<li class="page-item"><a class="page-link" href="#">1</a></li>
+					      	<li class="page-item active"><a class="page-link" href="#">2</a></li>
+					      	<li class="page-item"><a class="page-link" href="#">3</a></li>
+					      	<li class="page-item"><a class="page-link" href="#">4</a></li>
+					      	<li class="page-item"><a class="page-link" href="#">5</a></li>
+				            <!-- Next 버튼 -->
+				            <li class="page-item">
+				                <a class="page-link" href="#" id="next-page">
+				                    next
+				                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1"><path d="M9 6l6 6l-6 6"></path></svg>
+				                </a>
+				            </li>
+				        </ul>
+				    </nav>
+				</div>
+		    </div>
+		  </div>
+		</div>
+      </div>
+    </div>
+    <%@ include file="/WEB-INF/pages/main/admin/user/edit-modal.jsp"%>
+    <script src="${path}/resources/js/main/user/auth.js"></script>
+    <script src="${path}/resources/js/main/admin/user.js"></script>
+	<script src="${path}/resources/js/common/common.js"></script>
+    <script src="${path}/resources/js/common/tabler/tabler.min.js" defer></script>
+    <script src="${path}/resources/js/common/tabler/demo.min.js" defer></script>
+    <script src="${path}/resources/libs/list.js/dist/list.min.js" defer></script>
+    
+    <!-- Bootstrap 5 Tooltip 초기화 스크립트 -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+          new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+      });
+    </script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+package egovframework.main.admin.user.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+
+import egovframework.environment.security.CustomUserDetails;
+import egovframework.main.admin.user.dao.AdminDAO;
+import egovframework.main.admin.user.dto.AdminDTO;
+import egovframework.rte.fdl.cmmn.EgovAbstractServiceImpl;
+
+@Service("adminService")
+public class AdminService extends EgovAbstractServiceImpl {
+
+    @Resource(name = "adminDAO")
+    private AdminDAO adminDAO;
+
+    public List<AdminDTO> selectAllUsers() {
+        return adminDAO.selectAllUsers();
+    }
+    
+    public List<AdminDTO> selectUsersBySearch(String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) 
+                                  ? "%" + query.trim() + "%" 
+                                  : null;
+        return adminDAO.selectUsersBySearch(processedQuery);
+    }
+
+    public List<AdminDTO> selectPagedUsers(int offset, int size, String query) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("offset", offset);
+        params.put("size", size);
+        params.put("query", (query != null && !query.trim().isEmpty()) 
+                              ? "%" + query.trim().toLowerCase() + "%" 
+                              : null);
+        return adminDAO.selectPagedUsers(params);
+    }
+    
+    public void updateUser(AdminDTO user) {
+        // 현재 로그인된 사용자의 user_no를 가져와 수정자(mdfr)에 설정
+        CustomUserDetails currentUser = (CustomUserDetails) SecurityContextHolder
+                                            .getContext().getAuthentication().getPrincipal();
+        if (currentUser != null) {
+            user.setMdfr(currentUser.getUserNo());
+        }
+        adminDAO.updateUser(user);
+    }
+    
+    public void deleteUser(String eml) {
+        if (eml == null || eml.isEmpty()) {
+            throw new IllegalArgumentException("Email cannot be null or empty");
+        }
+        adminDAO.deleteUser(eml);
+    }
+    
+    public int countAllUsers(String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) 
+                                  ? "%" + query.trim().toLowerCase() + "%" 
+                                  : null;
+        return adminDAO.countAllUsers(processedQuery);
+    }
+    
+    public List<AdminDTO> selectUserGroups() {
+        return adminDAO.selectUserGroups();
+    }
+}

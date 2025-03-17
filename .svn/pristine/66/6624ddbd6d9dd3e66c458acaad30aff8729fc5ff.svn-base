@@ -1,0 +1,73 @@
+package egovframework.main.admin.code.subclass.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+
+import egovframework.environment.security.CustomUserDetails;
+import egovframework.main.admin.code.subclass.dao.SubClassDAO;
+import egovframework.main.admin.code.subclass.dto.SubClassDTO;
+import egovframework.rte.fdl.cmmn.EgovAbstractServiceImpl;
+
+@Service("subclassService")
+public class SubClassService extends EgovAbstractServiceImpl {
+    
+    @Resource(name = "subclassDAO")
+    private SubClassDAO subclassDAO;
+    
+    public int countSubClass(String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) 
+                                  ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("query", processedQuery);
+        return subclassDAO.countSubClass(params);
+    }
+    
+    public List<SubClassDTO> selectPagedSubClass(int offset, int size, String query) {
+        String processedQuery = (query != null && !query.trim().isEmpty()) 
+                                  ? "%" + query.trim() + "%" : null;
+        Map<String, Object> params = new HashMap<>();
+        params.put("offset", offset);
+        params.put("size", size);
+        params.put("query", processedQuery);
+        return subclassDAO.selectPagedSubClass(params);
+    }
+    
+    public void insertLandSubClass(SubClassDTO subclassDTO) throws Exception {
+        // 현재 로그인 사용자의 user_no를 생성자로 설정
+        CustomUserDetails userDetails =
+            (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        int currentUserNo = userDetails.getUserNo();
+        subclassDTO.setRgtr(currentUserNo);
+        
+        // 대분류(Land Use Classification) 레코드 존재 여부 확인
+        int count = subclassDAO.countLandClassification(subclassDTO.getLclsf_cd());
+        if(count == 0) {
+            // 대분류 레코드가 없으면 예외 발생
+            throw new Exception("\"Land Use Classification record does not exist. Please check the classification code.\"");
+        }
+        
+        // 중분류(land_sclsf) 레코드 삽입
+        subclassDAO.insertLandSubClass(subclassDTO);
+    }
+
+    
+    public void updateSubClass(SubClassDTO subclassDTO) {
+        // 수정 시 현재 로그인 사용자의 user_no를 수정자로 설정
+        CustomUserDetails userDetails =
+            (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        int currentUserNo = userDetails.getUserNo();
+        // 수정자(mdfr)와 수정일은 MyBatis 쿼리에서 CURRENT_TIMESTAMP로 처리됩니다.
+        subclassDTO.setMdfr(currentUserNo);
+        subclassDAO.updateSubClass(subclassDTO);
+    }
+    
+    public void deleteSubClass(int sclsf_cd) {
+        subclassDAO.deleteSubClass(sclsf_cd);
+    }
+}

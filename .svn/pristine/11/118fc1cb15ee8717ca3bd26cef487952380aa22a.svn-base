@@ -1,0 +1,42 @@
+package egovframework.common.uriMapper;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class UriMapper {
+	@GetMapping("/")
+	public String root() {
+		return "redirect:/dashboard";
+	}
+	
+	@GetMapping("/sign-in")
+	public String signIn() {
+		return "/main/user/sign-in";
+	}
+	
+	@GetMapping("/sign-up")
+	public String signUp() {
+		return "/main/user/sign-up";
+	}
+	
+	@GetMapping("/forgot-password")
+	public String forgotPassword() {
+		return "/main/user/forgot-password";
+	}
+	
+	@GetMapping("/dashboard")
+	public String dashboard() {
+		return "/main/dashboard/dashboard";
+	}
+	
+	@GetMapping("/map")
+	public String map() {
+		return "/main/map/map";
+	}
+	
+	@GetMapping("/admin")
+	public String admin() {
+		return "/main/admin/admin";
+	}
+}

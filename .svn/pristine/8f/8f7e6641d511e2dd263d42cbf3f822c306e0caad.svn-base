@@ -1,0 +1,43 @@
+package egovframework.main.admin.role.service.impl;
+
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+import egovframework.rte.psl.dataaccess.EgovAbstractMapper;
+import egovframework.main.admin.role.service.RoleVO;
+
+@Repository("roleDAO")
+public class RoleDAO extends EgovAbstractMapper {
+	
+    public List<RoleVO> selectGroupAuthryList(String groupId) {
+        return selectList("roleDAO.selectGroupAuthryList", groupId);
+    }
+    
+    public RoleVO selectAuthryInfo(String roleCode) {
+        return selectOne("roleDAO.selectAuthryInfo", roleCode);
+    }
+    
+    public void insertGroupAuthry(RoleVO roleVO) {
+        insert("roleDAO.insertGroupAuthry", roleVO);
+    }
+    
+    public void updateGroupAuthry(RoleVO roleVO) {
+        update("roleDAO.updateGroupAuthry", roleVO);
+    }
+    
+    public void deleteGroupAuthry(RoleVO roleVO) {
+        delete("roleDAO.deleteGroupAuthry", roleVO);
+    }
+    
+    public void deleteAllGroupAuthry(String groupId) {
+        delete("roleDAO.deleteAllGroupAuthry", groupId);
+    }
+    
+    public boolean hasAuthry(String groupId, String roleCode) {
+        RoleVO param = new RoleVO();
+        param.setGroup_no(groupId);
+        param.setAuthry_cd(roleCode);
+        return ((Integer) selectOne("roleDAO.hasAuthry", param)) > 0;
+    }
+    
+}

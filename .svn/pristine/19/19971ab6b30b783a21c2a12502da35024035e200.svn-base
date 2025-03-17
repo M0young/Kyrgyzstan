@@ -1,0 +1,299 @@
+/*========================================================
+    DATE: 2024. 02
+    AUTHOR: MOYOUNG
+    DESC: Map Search Module
+========================================================*/
+_GL.MAP_SEARCH = (function() {
+    'use strict';
+    
+    let initialized = false;
+    let instance = null;
+    let currentPage = 1;
+    
+    /**
+     * DOM 요소 가져오기
+     */
+    function getElements() {
+        return {
+	        searchInput: document.getElementById('regionSearchInput'),
+	        searchTab: document.querySelector('a[href="#sidebar-search"]'),
+	        totalCount: document.getElementById('searchTotalCount'),
+	        resultTable: document.getElementById('searchResultTable'),
+	        pagination: document.getElementById('searchPagination'),
+	        pageUnit: document.getElementById('searchPageUnit')
+        }
+    };
+   
+/* =====================================================
+    Search Main
+======================================================*/
+    /**
+     * 지역 검색 
+     */
+    function searchRegion(page = 1, searchTerm = '') {
+    	const elements = getElements();
+    	const pageUnit = parseInt(elements.pageUnit.value);
+    	const currentLang = _GL.COMMON.getCurrentLanguage();
+    	
+    	elements.resultTable.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center py-4">
+                    <div class="spinner-border text-primary">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+    	
+        fetch(`/klums/region/search?search=${encodeURIComponent(searchTerm)}&lang=${currentLang}&pageIndex=${page}&pageUnit=${pageUnit}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            	'X-CSRF-TOKEN': _GL.csrf.token
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 검색 탭 활성화
+                elements.searchTab.click();
+                updateSearchResults(data.data);
+                updatePagination(data.data.paginationInfo);
+                updateTotalCount(data.data.count);
+            } else {
+                console.error('검색 실패:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('API 호출 오류:', error);
+        });
+    }
+    
+    /**
+     * 검색 결과 테이블 업데이트
+     */
+    function updateSearchResults(data) {
+    	const elements = getElements();
+        elements.resultTable.innerHTML = '';
+        
+        if (!data.list || data.list.length === 0) {
+            // 검색 결과가 없을 때
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td colspan="3" class="text-center text-muted py-4">
+                    No results found
+                </td>
+            `;
+            elements.resultTable.appendChild(row);
+            return;
+        }
+        
+        data.list.forEach((item) => {
+            const row = document.createElement('tr');
+            
+            function getFormattedText(text, originalText) {
+                const className = originalText ? '' : 'text-muted';
+                let formattedText = `<span class="${className}">${text}</span>`;
+                if (originalText && originalText !== text) {
+                    formattedText += ` <span class="text-muted">(${originalText})</span>`;
+                }
+                return formattedText;
+            }
+
+            const item1Text = getFormattedText(item.item1, item.item1_original);
+            const item2Text = getFormattedText(item.item2, item.item2_original);
+            const item3Text = item.item3 ? getFormattedText(item.item3, item.item3_original) : '';
+            
+            const location = item.item3 
+                ? `${item1Text} > ${item2Text} > ${item3Text}`
+                : `${item1Text} > ${item2Text}`;
+                
+            row.innerHTML = `
+                <td class="text-center">${item.rownum}</td>
+                <td class="text-center">
+                    <a href="#" class="location-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" 
+                             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" 
+                             stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-map-pin">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                            <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+                            <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z" />
+                        </svg>
+                    </a>
+                </td>
+                <td>${location}</td>
+            `;
+            
+            const locationIcon = row.querySelector('.location-icon');
+            locationIcon.addEventListener('click', (e) => {
+                e.preventDefault();
+                const x = parseFloat(item.xpos);
+                const y = parseFloat(item.ypos);
+                
+                _GL.MAP.getInstance().getView().animate({
+                    center: ol.proj.fromLonLat([x, y]),
+                    zoom: 17,
+                    duration: 1000
+                });
+                
+                _GL.MAP.createMarker(x, y, item.item3 || item.item2);
+            });
+            
+            elements.resultTable.appendChild(row);
+        });
+    }
+    
+    /**
+     * 페이지네이션 업데이트
+     */
+    function updatePagination(paginationInfo) {
+    	const elements = getElements();
+        elements.pagination.innerHTML = '';
+        
+        // 이전 페이지 버튼
+        const prevDisabled = paginationInfo.currentPageNo <= 1;
+        elements.pagination.appendChild(createPageItem('prev', prevDisabled));
+        
+        // 현재 페이지 그룹의 시작과 끝 계산
+        const currentGroup = Math.floor((paginationInfo.currentPageNo - 1) / 5);
+        const startPage = currentGroup * 5 + 1;
+        const endPage = Math.min(startPage + 4, paginationInfo.lastPageNo);
+        
+        // 페이지 번호
+        for (let i = startPage; i <= endPage; i++) {
+            const isActive = i === paginationInfo.currentPageNo;
+            elements.pagination.appendChild(createPageItem(i, false, isActive));
+        }
+        
+        // 다음 페이지 버튼
+        const nextDisabled = paginationInfo.currentPageNo >= paginationInfo.lastPageNo;
+        elements.pagination.appendChild(createPageItem('next', nextDisabled));
+    }
+    
+    /**
+     * 페이지네이션 아이템 생성
+     */
+    function createPageItem(value, disabled = false, active = false) {
+        const li = document.createElement('li');
+        li.className = `page-item${disabled ? ' disabled' : ''}${active ? ' active' : ''}`;
+        
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.href = '#';
+        
+        if (value === 'prev') {
+            a.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" 
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
+                    <path d="M15 6l-6 6l6 6"></path>
+                </svg> prev
+            `;
+        } else if (value === 'next') {
+            a.innerHTML = `
+                next <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" 
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
+                    <path d="M9 6l6 6l-6 6"></path>
+                </svg>
+            `;
+        } else {
+            a.textContent = value;
+        }
+        
+        if (!disabled) {
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                handlePageClick(value);
+            });
+        }
+        
+        li.appendChild(a);
+        return li;
+    }
+    
+    /**
+     * 전체 검색 결과 수 업데이트
+     */
+    function updateTotalCount(count) {
+    	const elements = getElements();
+        elements.totalCount.textContent = `Total: ${count}`;
+    }
+    
+/* =====================================================
+    Event Handlers
+======================================================*/
+    function handlePageClick(value) {
+    	const elements = getElements();
+        let newPage = currentPage;
+        
+        if (value === 'prev') {
+            newPage = currentPage - 1;
+        } else if (value === 'next') {
+            newPage = currentPage + 1;
+        } else {
+            newPage = parseInt(value);
+        }
+        
+        if (newPage !== currentPage) {
+            currentPage = newPage;
+            searchRegion(currentPage, elements.searchInput.value.trim());
+        }
+    }
+    
+/* =====================================================
+    Event Listeners
+======================================================*/
+    function initializeEventListeners() {
+        const elements = getElements();
+        
+        // 검색어 입력 엔터 이벤트
+        elements.searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const searchTerm = e.target.value.trim();
+                
+                if (searchTerm) {
+                    currentPage = 1;
+                    searchRegion(currentPage, searchTerm);
+                } else {
+                    _GL.COMMON.showToast('Please enter a search term', 'warning');
+                }
+            }
+        });
+        
+        // pageUnit 변경 이벤트
+        elements.pageUnit.addEventListener('change', function() {
+            let value = this.value.trim();
+            if (value === '') {
+                this.value = 10;
+                return;
+            }
+            value = parseInt(value);
+            if (isNaN(value)) {
+                this.value = 10;
+            } else {
+                this.value = Math.min(Math.max(value, 1), 100);
+            }
+            
+            const searchTerm = elements.searchInput.value.trim();
+            if (searchTerm) {
+                currentPage = 1;
+                searchRegion(currentPage, searchTerm);
+            }
+        });
+    }
+    
+    // public API
+    return {
+        init: function() {
+            if (initialized) return;
+            instance = _GL.MAP.getInstance();
+            initializeEventListeners();
+            initialized = true;
+        }
+    };
+})();
+
+// DOM 로드 완료 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    _GL.MAP_SEARCH.init();
+});

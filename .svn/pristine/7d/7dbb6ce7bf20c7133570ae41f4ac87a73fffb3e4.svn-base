@@ -1,0 +1,59 @@
+package egovframework.main.admin.role.service.impl;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+
+import egovframework.main.admin.role.service.RoleVO;
+import egovframework.rte.psl.dataaccess.EgovAbstractMapper;
+
+@Repository("roleDAO")
+public class RoleDAO extends EgovAbstractMapper {
+	
+	public List<RoleVO> selectGroupAuthryList() {
+        return selectList("roleDAO.selectGroupAuthryList");
+    }
+    
+    public List<Integer> selectAuthryInfo(Integer groupNo) {
+        return selectList("roleDAO.selectAuthryInfo", groupNo);
+    }
+    
+    public void insertGroupAuthry(RoleVO roleVO) {
+        insert("roleDAO.insertGroupAuthry", roleVO);
+    }
+    
+    public void updateGroupAuthry(RoleVO roleVO) {
+        update("roleDAO.updateGroupAuthry", roleVO);
+    }
+    
+    public void deleteGroupAuthry(RoleVO roleVO) {
+        delete("roleDAO.deleteGroupAuthry", roleVO);
+    }
+    
+    public void deleteAllGroupAuthry(String groupId) {
+        delete("roleDAO.deleteAllGroupAuthry", groupId);
+    }
+    
+    public void insertAuthry(Integer groupNo, Integer authryNo) {
+        insert("roleDAO.insertAuthry", new RoleVO(groupNo, authryNo));
+    }
+
+    public void deleteAuthry(Integer groupNo, Integer authryNo) {
+        delete("roleDAO.deleteAuthry", new RoleVO(groupNo, authryNo));
+    }
+    
+    public void updateAuthryList(Integer groupNo, List<Integer> authryNos) {
+        // 기존 권한 삭제
+        delete("roleDAO.deleteAuthryByGroup", groupNo);
+        // 삽입 (선택된 권한이 있을 때만)
+        if (authryNos != null && !authryNos.isEmpty()) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("group_no", groupNo);
+            params.put("authryNos", authryNos);
+            insert("roleDAO.batchInsertAuthry", params);
+        }
+    }
+    
+}

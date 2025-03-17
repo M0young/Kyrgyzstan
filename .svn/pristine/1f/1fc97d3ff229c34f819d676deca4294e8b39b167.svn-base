@@ -1,0 +1,28 @@
+package egovframework.main.map.region.service.impl;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.springframework.stereotype.Repository;
+
+import egovframework.rte.psl.dataaccess.EgovAbstractMapper;
+import egovframework.main.map.region.service.RegionVO;
+
+@Repository("regionDAO")
+public class RegionDAO extends EgovAbstractMapper {
+
+	@Resource(name = "sqlSession")
+	public void setSqlSessionFactory(SqlSessionFactory sqlSession) {
+		super.setSqlSessionFactory(sqlSession);
+	}
+	
+	public List<?> selectRegionList(RegionVO regionVO) {
+		return selectList("regionDAO.selectRegionList", regionVO);
+	}
+
+	public int selectRegionListCount(RegionVO regionVO) {
+		return selectOne("regionDAO.selectRegionListCount", regionVO);
+	}
+}

@@ -1,0 +1,45 @@
+package egovframework.main.map.upload.shapefile.dao;
+
+import java.util.Map;
+import javax.annotation.Resource;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.springframework.stereotype.Repository;
+import egovframework.rte.psl.dataaccess.EgovAbstractMapper;
+import egovframework.main.map.upload.shapefile.dto.ShapefileDTO;
+
+@Repository("shapefileDAO")
+public class ShapefileDAO extends EgovAbstractMapper {
+	
+    @Resource(name = "sqlSession")
+    public void setSqlSessionFactory(SqlSessionFactory sqlSession) {
+        super.setSqlSessionFactory(sqlSession);
+    }
+    
+    public int createShapefileTable(Map<String, Object> params) {
+        return update("shapefileDAO.createShapefileTable", params);
+    }
+    
+    public int insertShapefileData(Map<String, Object> params) {
+        return insert("shapefileDAO.insertShapefileData", params);
+    }
+    
+    public int copyTableToBackup(Map<String, Object> params) {
+        return update("shapefileDAO.copyTableToBackup", params);
+    }
+    
+    public int moveTableToBackup(Map<String, Object> params) {
+        return update("shapefileDAO.moveTableToBackup", params);
+    }
+    
+    public ShapefileDTO selectLandUseTypeCode(ShapefileDTO shapefileDTO) {
+        return selectOne("shapefileDAO.selectLandUseTypeCode", shapefileDTO);
+    }
+    
+    public boolean checkTableExists(String layerType) {
+        return selectOne("shapefileDAO.checkTableExists", layerType);
+    }
+    
+    public int selectSridFromExistLayer(String layerType) {
+        return selectOne("shapefileDAO.selectSridFromExistLayer", layerType);
+    }
+}

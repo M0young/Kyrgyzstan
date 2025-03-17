@@ -1,0 +1,4 @@
+@charset "UTF-8";
+.ms-25 {
+	margin-left: .75rem !important;
+}

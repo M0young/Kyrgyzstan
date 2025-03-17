@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="layerDAO">
+    <select id="selectLanduseClassifications" parameterType="String" resultType="layerDTO">
+        SELECT DISTINCT
+            ls.sclsf_cd,
+            ll.lclsf_cd,
+            ll.lclsf_nm_${value} as lclsf_nm_${value},
+            ls.sclsf_nm_${value} as sclsf_nm_${value}
+        FROM data.land_use l
+        JOIN klums.land_lclsf ll ON l.lclsf_cd = ll.lclsf_cd
+        JOIN klums.land_sclsf ls ON l.sclsf_cd = ls.sclsf_cd
+        ORDER BY 1, 2
+    </select>
+    
+    <select id="selectLandtypeClassifications" parameterType="String" resultType="layerDTO">
+        SELECT DISTINCT
+            lt.type_cd,
+            lt.type_nm_${value} as type_nm_${value}
+        FROM data.land_use l
+        JOIN klums.land_type lt ON l.kategoria_ = lt.type_cd
+        ORDER BY 1, 2
+    </select>
+</mapper>

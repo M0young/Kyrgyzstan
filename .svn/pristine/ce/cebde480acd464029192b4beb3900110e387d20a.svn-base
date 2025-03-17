@@ -1,0 +1,462 @@
+@charset "UTF-8";
+
+/* =====================================================
+    sidebar - main
+======================================================*/
+.navbar-vertical {
+  width: 20rem !important;;
+  min-height: 100vh;
+  transition: transform 0.3s ease;
+  position: fixed;
+  left: 0;
+  height: calc(100vh - 56px);
+  overflow-y: auto;
+  margin-top: 56px;
+  z-index: 1000;
+}
+
+/* 메인 컨텐츠 */
+.page-wrapper {
+    margin-left: 20rem; 
+    padding-top: 56px; 
+    overflow-x: hidden; 
+    overflow-y: auto; 
+}
+
+.navbar-vertical.collapsed + .page-wrapper {
+    margin-left: 0;
+    transition: margin-left 0.3s ease;
+}
+
+/* 헤더 고정 */
+header.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1050;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 음영 효과 추가 */
+}
+
+
+.navbar-vertical.collapsed {
+  transform: translateX(-100%);
+}
+
+.container-fluid {
+	align-items: stretch !important;
+}
+
+.header.navbar {
+	z-index: 1033;
+}
+
+.header-container {
+	max-width: 100% !important;
+}
+
+.navbar, .header-container .navbar-brand {
+	user-select: none !important;
+}
+
+.avatar.avatar-xs {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: .75rem;
+  border-radius: 4px;
+}
+
+.icon {
+	--tblr-icon-size: 1.5rem !important;
+}
+
+.header-center {
+	width: 450px;
+	margin-left: 21%;
+	margin-right: 21%;
+}
+
+.header-menu {
+	top: calc(3rem + 1px);
+	right: 0px;
+}
+
+@media (max-width: 768px) {
+    .navbar-brand {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 0 0.5rem;
+    }
+    .navbar-nav .nav-item {
+        padding: 0 0.25rem !important;
+    }
+    .nav-link {
+        padding: 0.3rem !important;
+    }
+    .nav-link-icon {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+/* 테이블 행 선택 효과 */
+.role-list-table tr.selected {
+    background-color: rgba(32, 107, 196, 0.1) !important; /* 선택된 행의 배경 */
+    transition: background-color 0.3s ease;
+}
+
+/* 마우스 오버 시 효과 */
+.role-list-table tr:hover {
+    background-color: rgba(32, 107, 196, 0.05);
+    cursor: pointer;
+}
+
+
+
+/* =====================================================
+    Navigation
+======================================================*/
+.nav-link.active .nav-link-icon,
+.nav-link.active .nav-link-title {
+    color: var(--tblr-primary);
+    font-weight: 500;
+}
+
+.nav-link {
+    position: relative;
+    transition: all 0.2s ease-in-out;
+}
+
+.nav-link:hover {
+    transform: translateY(-1px);
+}
+
+.nav-link.active {
+    background-color: rgba(32, 107, 196, 0.04);
+}
+
+
+
+
+/* =====================================================
+   card - user
+====================================================== */
+
+.role-list-card {
+--tblr-card-spacer-y: 1rem;
+    --tblr-card-spacer-x: 1.25rem;
+    --tblr-card-title-spacer-y: 1.25rem;
+    --tblr-card-border-width: var(--tblr-border-width);
+    --tblr-card-border-color: var(--tblr-border-color-translucent);
+    --tblr-card-border-radius: var(--tblr-border-radius);
+    --tblr-card-box-shadow: var(--tblr-shadow-card);
+    --tblr-card-inner-border-radius: calc(var(--tblr-border-radius) -(var(--tblr-border-width)));
+    --tblr-card-cap-padding-y: 1rem;
+    --tblr-card-cap-padding-x: 1.25rem;
+    --tblr-card-cap-bg: var(--tblr-bg-surface-tertiary);
+    --tblr-card-cap-color: inherit;
+    --tblr-card-color: inherit;
+    --tblr-card-bg: var(--tblr-bg-surface);
+    --tblr-card-img-overlay-padding: 1rem;
+    --tblr-card-group-margin: 1.5rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: var(--tblr-card-height);
+    color: var(--tblr-body-color);
+    word-wrap: break-word;
+    background-color: var(--tblr-card-bg);
+    background-clip: border-box;
+    border: var(--tblr-card-border-width) solid var(--tblr-card-border-color);
+    border-radius: var(--tblr-card-border-radius);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.role-list-card .card-header {
+    background-color: var(--tblr-body-bg);
+    border-bottom: 1px solid var(--tblr-border-color-translucent);
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.card-footer .save-btn {
+    width: 80px;
+    display: flex;
+    padding: 8px 15px;
+    font-size: 14px;
+    font-weight: bold;
+    border: 1px solid var(--tblr-primary);
+    background-color: var(--tblr-bg-surface);
+    color: var(--tblr-body-color);
+    border-radius: 4px;
+    cursor: pointer;
+    justify-content: center;
+    align-items: center;
+    
+}
+
+.card-footer .save-btn:hover {
+    background-color: var(--tblr-btn-bg);
+	border-color: var(--tblr-border-active-color);
+	border: 1px solid var(--tblr-border-color);
+    color: var(--tblr-body-color);
+}
+
+.role-list-card .card-body {
+    padding-top: 15px;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-bottom: 0px;
+    
+}
+
+.role-list-table {
+    --tblr-table-color-type: initial;
+    --tblr-table-bg-type: initial;
+    --tblr-table-color-state: initial;
+    --tblr-table-bg-state: initial;
+    --tblr-table-color: inherit;
+    --tblr-table-bg: transparent;
+    --tblr-table-border-color: var(--tblr-border-color-translucent);
+    --tblr-table-accent-bg: transparent;
+    --tblr-table-striped-color: inherit;
+    --tblr-table-striped-bg: var(--tblr-bg-surface-tertiary);
+    --tblr-table-active-color: inherit;
+    --tblr-table-active-bg: rgba(var(--tblr-emphasis-color-rgb), 0.1);
+    --tblr-table-hover-color: inherit;
+    --tblr-table-hover-bg: rgba(var(--tblr-emphasis-color-rgb), 0.075);
+    width: 100%;
+    margin-bottom: 1rem;
+    vertical-align: top;
+    border-color: var(--tblr-table-border-color);
+}
+
+
+.role-list-table th, .role-list-table td {
+    border: 1px solid var(--tblr-border-color-translucent);
+    padding: 10px;
+    text-align: center;
+}
+
+.role-list-table th {
+    color: var(--tblr-gray-500);
+    background: var(--tblr-bg-surface-tertiary);
+    font-size: .625rem;
+    font-weight: var(--tblr-font-weight-bold);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    line-height: 1rem;
+    color: var(--tblr-secondary);
+    padding-top: .5rem;
+    padding-bottom: .5rem;
+    white-space: nowrap;
+}
+
+
+.role-authority-card {
+    --tblr-card-border-color: var(--tblr-border-color-translucent);
+    --tblr-card-border-width: var(--tblr-border-width);
+    --tblr-card-border-radius: var(--tblr-border-radius);
+    --tblr-card-box-shadow: var(--tblr-shadow-card);
+    --tblr-card-inner-border-radius: calc(var(--tblr-border-radius) -(var(--tblr-border-width)));
+    --tblr-card-cap-bg: var(--tblr-bg-surface-tertiary);
+    --tblr-card-cap-color: inherit;
+    --tblr-card-color: inherit;
+    --tblr-card-bg: var(--tblr-bg-surface);
+    flex-direction: column;
+    height: var(--tblr-card-height);
+    color: var(--tblr-body-color);
+    word-wrap: break-word;
+    background-color: var(--tblr-card-bg);
+    background-clip: border-box;
+    border-radius: var(--tblr-card-border-radius);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: var(--tblr-card-border-width) solid var(--tblr-card-border-color);
+}
+
+.role-authority-card .card-header {
+    background-color: var(--tblr-body-bg);
+    border-bottom: 1px solid var(--tblr-border-color-translucent);
+    padding: 10px 15px;
+    font-weight: bold;
+    font-size: 16px;
+    text-align: center;
+}
+
+.role-section {
+    padding-top: 15px;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-bottom: 0px;
+}
+
+.role-title {
+    font-size: 17px;
+    margin-bottom: 15px;
+    color: var(--tblr-body-color);
+    text-align: left; /* 왼쪽 정렬 */
+}
+
+.card-title{
+	font-size: 1.2em;
+	color: var(--tblr-body-color);
+}
+
+.role-group {
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: #f6f8fb;
+    text-align: left; /* 왼쪽 정렬 */
+}
+
+.role-group-admin{
+    padding: 10px 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: #f6f8fb;
+    text-align: left; /* 왼쪽 정렬 */
+}
+
+.role-subtitle {
+    font-size: 14px;
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 10px;
+}
+
+.role-checkbox-container {
+    display: flex;
+    flex-direction: column; /* 체크박스 아래로 나열 */
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.role-checkbox {
+    margin-bottom: 5px;
+}
+
+.card-footer {
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    background-color: var(--tblr--bg);
+    height: 50px;
+    padding: 33px;
+    border: 1px;
+}
+
+
+
+
+
+.pagination {
+    display: flex;
+    justify-content: center; /* 가운데 정렬 */
+    align-items: center; /* 세로 정렬 */
+    gap: 8px; /* 버튼 간 간격 */
+    margin-top: 10px; /* 위로 여백 */
+    padding: 0;
+    list-style: none; /* 기본 리스트 스타일 제거 */
+}
+.pagination .page-link svg {
+    width: 20px; /* 아이콘 크기 */
+    height: 18px; /* 아이콘 크기 */
+    margin: 0; /* 아이콘 주변 여백 제거 */
+}
+
+/* =====================================================
+    EDIT modal - admin
+======================================================*/
+
+
+
+
+
+/* Page Title 스타일 */
+.page-title {
+    font-size: 25px; /* 글자 크기 조정 */
+    font-weight: 700; /* 더 두껍게 */
+    color: var(--tblr-body-color);
+    text-align: left; /* 왼쪽 정렬 */
+    text-transform: uppercase; /* 모든 글자를 대문자로 */
+    position: relative; /* 아이콘 위치를 위해 상대 위치 */
+    display: inline-flex; /* 아이콘과 함께 사용 */
+    align-items: center; /* 아이콘과 텍스트 수직 정렬 */
+}
+
+/* 아이콘 추가 (선택 사항)➤➡️▶︎ */
+.page-title::before {
+    content: "▶︎"; /* 원하는 아이콘 (이모지 또는 FontAwesome) */
+    margin-right: 10px; /* 텍스트와 간격 */
+    font-size: 20px; /* 아이콘 크기 */
+    /*color: #007bff; 아이콘 색상 */
+}
+
+
+
+/* =====================================================
+    accordion
+======================================================*/
+
+
+.accordion-header{
+	background-color: var(--tblr-body-bg);
+}
+
+.accordion-body{
+	padding-bottom: 0;
+}
+
+.accordion-button{
+	padding-top: 10px;
+	padding-bottom: 10px;
+}
+
+
+.create-btn{
+	padding-top: 5px;
+	padding-bottom: 5px;
+}
+
+
+
+
+.modal-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 50%;
+    color: var(--tblr-modal-color);
+    pointer-events: auto;
+    background-color: var(--tblr-modal-bg);
+    background-clip: padding-box;
+    border: var(--tblr-modal-border-width) solid var(--tblr-modal-border-color);
+    border-radius: var(--tblr-modal-border-radius);
+    box-shadow: var(--tblr-modal-box-shadow);
+    outline: 0;
+    max-width: 600px;
+    margin: auto;
+    top: 50%;
+    /* left: 50%; */
+    transform: translate(10px, 10px);
+}
+
+
+
+
+
+
+
+
+
+
+
+

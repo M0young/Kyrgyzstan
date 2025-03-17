@@ -1,0 +1,36 @@
+package egovframework.environment.security;
+
+import java.util.Collection;
+import java.util.List;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+
+public class CustomUserDetails extends User {
+    private static final long serialVersionUID = 7542461012103308787L;
+    
+    private String realName;
+    private String groupName;
+    
+    public CustomUserDetails(String email, 
+                           String realName, 
+                           String password, 
+                           boolean enabled,
+                           boolean accountNonExpired, 
+                           boolean credentialsNonExpired,
+                           boolean accountNonLocked, 
+                           Collection<? extends GrantedAuthority> authorities,
+                           String groupName) {
+        super(email, password, enabled, accountNonExpired, credentialsNonExpired, accountNonLocked, authorities);
+        this.realName = realName;
+        this.groupName = groupName;
+    }
+    
+    public String getRealName() {
+        return this.realName;
+    }
+    
+    public String getGroupName() {
+        return this.groupName;
+    }
+}

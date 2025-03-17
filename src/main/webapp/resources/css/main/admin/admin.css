@@ -1,0 +1,43 @@
+/* =====================================================
+   Sidebar - main
+====================================================== */
+/* 사이드바 기본*/
+#sidebar-admin.navbar-vertical.navbar-expand-lg {
+    width: 20rem;
+    top: 56px;
+    position: fixed;
+}
+
+/* =====================================================
+   Sidebar - item
+====================================================== */
+/* 디자인 수정*/
+#sidebar-admin .nav-item {
+    padding: 8px 12px;
+}
+
+/* =====================================================
+   Sidebar - link
+====================================================== */
+/* 링크 동작 처리 */
+#sidebar-admin .nav-link {
+    transition: all 0.4s ease-out;
+}
+
+/* 사이드바 활성 링크*/
+#sidebar-admin.navbar-vertical .nav-link.active {
+  background-color: rgba(var(--tblr-emphasis-color-rgb), 0.05);
+  color: var(--tblr-primary);
+  font-weight: 500;
+}
+
+/* 사이드바 마우스 오버 활성 링크*/
+#sidebar-admin.navbar-vertical .nav-link:hover {
+    background-color: rgba(var(--tblr-emphasis-color-rgb), 0.075);
+    transform: translateY(-1px);
+}
+
+/* 사이드바 내부 활성 링크의 아이콘 */
+#sidebar-admin .nav-link.active .nav-link-icon{
+    color: var(--tblr-primary);
+}

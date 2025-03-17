@@ -1,0 +1,44 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"	pageEncoding="UTF-8"%>
+
+<div class="modal modal-blur fade" id="edit-modal-report" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="User Edit">
+	<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<div class="modal-title-delete">
+				
+				</div>
+				<h5 class="modal-title">
+				User Edit<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-trash-x"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7h16" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /><path d="M10 12l4 4m0 -4l-4 4" /></svg>
+				</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal"	aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="mb-3">
+					<label class="form-label">Name</label> 
+					<input type="text" class="form-control" placeholder="Your name">
+				</div>
+				
+				<div class="mb-3">
+					<label class="form-label">Role</label>
+					<select class="form-select" id="user-group-select"></select>
+				</div>	
+				
+				<div class="mb-3">
+					<label class="form-label">Organization</label> 
+					<input type="text" class="form-control" placeholder="Your Organization">
+				</div>	
+				
+				<div class="mb-3">
+					<label class="form-label">Department</label> 
+					<input type="text" class="form-control" placeholder="Your Department">
+				</div>			
+			</div>
+			
+			<div class="modal-footer justify-content-between">
+				<button type="button" class="btn btn-primary" id="saveEditUser">SAVE</button>
+                <button type="button" class="btn btn-secondary" id="cancelEditUser">CANCEL</button>
+                <button type="button" class="btn btn-outline-danger" id="deleteEditUser">DELETE</button>
+			</div>
+		</div>
+	</div>
+</div>

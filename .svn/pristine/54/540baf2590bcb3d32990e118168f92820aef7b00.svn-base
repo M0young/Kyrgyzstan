@@ -1,0 +1,207 @@
+/*========================================================
+   DATE: 2024. 01
+   AUTHOR: MOYOUNG
+   DESC: Common Module
+========================================================*/
+_GL.COMMON = (function() {
+	'use strict';
+	
+	let initialized = false;
+
+	/**
+	 * DOM 요소 가져오기
+	 */
+	function getElements() {
+		return {
+			language : {
+				dropdown : document.querySelectorAll('[data-lang]'),
+				currentFlag : document.querySelector('.current-flag'),
+				checkmarks : document.querySelectorAll('.lang-check')
+			},
+			toast : document.getElementById('toast-simple')
+		};
+	}
+
+	/**
+	 * 현재 선택된 언어 가져오기
+	 */
+	function getCurrentLanguage() {
+		const cookies = document.cookie.split('; ');
+		const languageCookie = cookies.find(function(row) {
+			return row.startsWith('language=');
+		});
+		return languageCookie ? languageCookie.split('=')[1] : 'ko';
+	}
+
+	/**
+	 * 언어 체크마크 업데이트
+	 */
+	function updateLanguageChecks(currentLang) {
+		const elements = getElements();
+		if (elements.language.checkmarks) {
+			elements.language.checkmarks.forEach(function(check) {
+				if (check && check.id) {
+					check.classList.toggle('d-none', check.id !== 'check-' + currentLang);
+				}
+			});
+		}
+	}
+
+	/**
+	 * 언어 플래그 업데이트
+	 */
+	function updateLanguageFlag(currentLang) {
+		const elements = getElements();
+		const currentLangElement = document.querySelector('[data-lang="' + currentLang + '"] .avatar');
+		if (currentLangElement && elements.language.currentFlag) {
+			const currentFlagUrl = currentLangElement.style.backgroundImage;
+			if (currentFlagUrl) {
+				elements.language.currentFlag.style.backgroundImage = currentFlagUrl;
+			}
+		}
+	}
+
+	/**
+	 * 언어 변경
+	 */
+	function changeLanguage(lang) {
+		fetch('./change-language', {
+			method : 'POST',
+			headers : {
+				'Content-Type' : 'application/x-www-form-urlencoded',
+				'X-CSRF-TOKEN' : _GL.csrf.token
+			},
+			body : 'lang=' + lang
+		}).then(function(response) {
+			if (response.ok) {
+				location.reload();
+			}
+		});
+	}
+
+	/**
+	 * 알림 메시지 표시
+	 */
+	function showAlert(elementId, message, type) {
+	    // 이전 alert 제거
+	    const existingAlert = document.getElementById(elementId);
+	    if (existingAlert) {
+	        existingAlert.remove();
+	    }
+
+	    // 새로운 alert 생성
+	    const alertHTML = 
+	        '<div id="' + elementId + '" class="alert alert-' + (type === 'error' ? 'danger' : 'success') + ' alert-dismissible" role="alert">' +
+	            '<div class="d-flex">' +
+	                '<div>' + message + '</div>' +
+	            '</div>' +
+	            '<a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>' +
+	        '</div>';
+
+	    // alert를 원하는 위치에 삽입
+	    const container = document.querySelector('#' + elementId + 'Container');
+	    if (container) {
+	        container.innerHTML = alertHTML;
+	    }
+	}
+	
+	/**
+	 * 토스트 메시지 표시
+	 */
+	function showToast(message, type) {
+	    const elements = getElements();
+	    const toast = elements.toast;
+	    if (!toast) return;
+	    
+	    const toastBody = toast.querySelector('.toast-body');
+	    const toastHeader = toast.querySelector('.toast-header strong');
+	    
+	    // 타입별 설정
+	    const settings = {
+	        success: {
+	            classes: ['bg-success', 'text-white'],
+	            title: 'Success'
+	        },
+	        error: {
+	            classes: ['bg-danger', 'text-white'],
+	            title: 'Error'
+	        },
+	        warning: {
+	            classes: ['bg-warning', 'text-white'],
+	            title: 'Warning'
+	        },
+	        info: {
+	            classes: ['bg-info', 'text-white'],
+	            title: 'Information'
+	        }
+	    };
+	    
+	    // 모든 스타일 클래스 제거
+	    const allClasses = Object.values(settings)
+	        .flatMap(setting => setting.classes);
+	    toast.classList.remove(...allClasses);
+	    
+	    // 새로운 스타일 적용
+	    const setting = settings[type];
+	    if (setting) {
+	        toast.classList.add(...setting.classes);
+	        toastHeader.textContent = setting.title;
+	    }
+	    
+	    toastBody.textContent = message;
+	    
+	    const bsToast = new bootstrap.Toast(toast, {
+	        autohide: true,
+	        delay: 3000
+	    });
+	    
+	    bsToast.show();
+	}
+
+	/**
+	 * 이벤트 리스너 초기화
+	 */
+	function initializeEventListeners() {
+		const elements = getElements();
+
+		// 언어 변경 이벤트
+		if (elements.language.dropdown) {
+			elements.language.dropdown.forEach(function(item) {
+				if (item) {
+					item.addEventListener('click', function(e) {
+						e.preventDefault();
+						const lang = item.getAttribute('data-lang');
+						if (lang) {
+							changeLanguage(lang);
+						}
+					});
+				}
+			});
+		}
+
+		// 초기 언어 설정
+		const currentLang = getCurrentLanguage();
+		updateLanguageChecks(currentLang);
+		updateLanguageFlag(currentLang);
+	}
+
+	// public API
+	return {
+		init : function() {
+			if (initialized)
+				return;
+			initializeEventListeners();
+			initialized = true;
+		},
+
+		getCurrentLanguage : getCurrentLanguage,
+		changeLanguage : changeLanguage,
+		showAlert : showAlert,
+		showToast : showToast
+	};
+})();
+
+// DOM 로드 완료 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+	_GL.COMMON.init();
+});

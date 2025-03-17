@@ -1,0 +1,292 @@
+/*========================================================
+    DATE: 2025. 01
+    AUTHOR: JEON
+    DESC: Land Use Mapping
+========================================================*/
+_GL.MAPPING = (function () {
+    'use strict';
+    
+    let currentPage = 0;
+    const pageSize = 10;
+    let subMappingData = [];  
+    
+    // DOM 요소들을 한 번에 가져오는 함수
+    function getElements() {
+        return {
+            mappingTableBody: document.getElementById('mapping-table-body'),
+            saveButton: document.querySelector('.save-btn'),
+            mappingCount: document.getElementById('mapping-count'),
+            prevPage: document.getElementById('prev-page'),
+            nextPage: document.getElementById('next-page'),
+            paginationNumbers: document.getElementById('pagination-numbers'),
+            subMappingContainer: document.getElementById('sub-mapping-list')
+        };
+    }
+    
+    
+    /**
+     * Classification List 조회
+     */
+    function fetchMappingData(page = 0) {
+        const elements = getElements();
+        currentPage = page;
+        elements.mappingTableBody.innerHTML = `<tr><td colspan="2" class="text-center">Loading...</td></tr>`;
+        let url = `/klums/api/admin/code/mapping/list/paged?page=${page}&size=${pageSize}`;
+        return fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const result = data.data || {};
+                const totalMapping = result.total || 0;
+                const mappings = result.mapping || [];
+                elements.mappingCount.textContent = totalMapping;
+                elements.mappingTableBody.innerHTML = '';
+                if (mappings.length === 0) {
+                    elements.mappingTableBody.innerHTML = `<tr><td colspan="2" class="text-center">No results found.</td></tr>`;
+                } else {
+                    mappings.forEach((cls, index) => {
+                        const row = `
+                            <tr class="classification-row" data-lclsf-cd="${cls.lclsf_cd}">
+                                <td>${(page * pageSize) + index + 1}</td>
+                                <td>${cls.lclsf_nm_en}</td>
+                            </tr>`;
+                        elements.mappingTableBody.insertAdjacentHTML('beforeend', row);
+                    });
+                    const rows = elements.mappingTableBody.querySelectorAll('.classification-row');
+                    rows.forEach(row => {
+                        row.addEventListener('click', function () {
+                            rows.forEach(r => r.classList.remove('selected'));
+                            this.classList.add('selected');
+                            this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // 선택된 분류의 기본키(lclsf_cd) 추출 후 서브분류 체크박스 업데이트
+                            updateSubMappingCheckboxes(String(this.getAttribute('data-lclsf-cd')));
+                        });
+                    });
+                }
+                setupPagination(totalMapping, page);
+                return { totalMapping, mapping: mappings };
+            })
+            .catch(error => {
+                console.error('Error fetching mapping data:', error);
+                elements.mappingTableBody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">Failed to load mappings</td></tr>';
+                return { totalMapping: 0, mapping: [] };
+            });
+    }
+    
+    /**
+     * SubClassification List 조회
+     */
+    function fetchSubMappingData() {
+        const elements = getElements();
+        elements.subMappingContainer.innerHTML = `<div class="d-flex justify-content-center dropdown-menu dropdown-menu-demo">Loading...</div>`;
+        let url = `/klums/api/admin/code/mapping/list/sub/paged`;
+        return fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                subMappingData = data.data || [];
+                renderSubMappingDropdown(subMappingData);
+                return subMappingData;
+            })
+            .catch(error => {
+                console.error('Error fetching sub mapping data:', error);
+                elements.subMappingContainer.innerHTML = `<div class="dropdown-menu dropdown-menu-demo text-danger">Failed to load sub classification list</div>`;
+            });
+    }
+    
+    // 드롭다운 메뉴를 서브분류 데이터로 렌더링
+    function renderSubMappingDropdown(data) {
+        const elements = getElements();
+        if (data.length === 0) {
+            elements.subMappingContainer.innerHTML = `<div class="dropdown-menu dropdown-menu-demo"><div class="dropdown-item">No results found.</div></div>`;
+        } else {
+            let dropdownHtml = `<div class="dropdown-menu dropdown-menu-demo">`;
+            data.forEach(item => {
+                dropdownHtml += `<label class="dropdown-item">
+                    <input class="form-check-input m-0 me-2" type="checkbox" data-lclsf-cd="${item.lclsf_cd}" data-sclsf-cd="${item.sclsf_cd}"> ${item.sclsf_nm_en}
+                </label>`;
+            });
+            dropdownHtml += `</div>`;
+            elements.subMappingContainer.innerHTML = dropdownHtml;
+        }
+    }
+    
+    
+    /**
+     * 페이지네이션 설정
+     */
+    function setupPagination(totalMapping, currentPage) {
+        const elements = getElements();
+        const totalPages = Math.ceil(totalMapping / pageSize);
+        if (currentPage <= 0) {
+            elements.prevPage.parentElement.classList.add('disabled');
+        } else {
+            elements.prevPage.parentElement.classList.remove('disabled');
+        }
+        if (currentPage >= totalPages - 1) {
+            elements.nextPage.parentElement.classList.add('disabled');
+        } else {
+            elements.nextPage.parentElement.classList.remove('disabled');
+        }
+        const blockSize = 5;
+        const block = Math.floor(currentPage / blockSize);
+        const startPage = block * blockSize;
+        const endPage = Math.min(totalPages, startPage + blockSize);
+        elements.paginationNumbers.innerHTML = '';
+        for (let i = startPage; i < endPage; i++) {
+            let li = document.createElement('li');
+            li.className = 'page-item' + (i === currentPage ? ' active' : '');
+            li.style.display = 'inline-block';
+            li.innerHTML = `<a class="page-link" href="#">${i + 1}</a>`;
+            li.addEventListener('click', (e) => {
+                e.preventDefault();
+                fetchMappingData(i);
+            });
+            elements.paginationNumbers.appendChild(li);
+        }
+    }
+    
+    function setupPaginationEvents() {
+        const elements = getElements();
+        if (elements.prevPage) {
+            elements.prevPage.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage > 0) {
+                    fetchMappingData(currentPage - 1);
+                }
+            });
+        }
+        if (elements.nextPage) {
+            elements.nextPage.addEventListener('click', (e) => {
+                e.preventDefault();
+                fetchMappingData(currentPage + 1);
+            });
+        }
+    }
+    
+    // 업데이트 요청을 수행하는 공통 함수
+    function updateMapping(sclsfCd, lclsfCd) {
+        return fetch('/klums/api/admin/code/mapping/update/', {
+            method: 'PUT',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': _GL.csrf ? _GL.csrf.token : ''
+            },
+            body: JSON.stringify({ lclsf_cd: lclsfCd, sclsf_cd: sclsfCd })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => ({ sclsfCd, data }));
+    }
+    
+    
+    /**
+     * 선택된 Classification(lclsf_cd)에 해당하는 SubClassification 체크박스 업데이트
+     */
+    function updateSubMappingCheckboxes(selectedLclsfCd) {
+        const elements = getElements();
+        const checkboxes = elements.subMappingContainer.querySelectorAll('input[type="checkbox"]');
+        let firstCheckedFound = false;
+        checkboxes.forEach(checkbox => {
+            const checkboxLclsfCd = String(checkbox.getAttribute('data-lclsf-cd'));
+            const labelEl = checkbox.closest('label'); // 부모 label 요소 선택
+            if (checkboxLclsfCd === selectedLclsfCd) {
+                checkbox.checked = true;
+                checkbox.disabled = false;
+                if (labelEl) {
+                    labelEl.classList.remove('disabled');
+                }
+                if (!firstCheckedFound) {
+                    checkbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstCheckedFound = true;
+                }
+            } else {
+                checkbox.checked = false;
+                checkbox.disabled = true;
+                if (labelEl) {
+                    labelEl.classList.add('disabled');
+                }
+            }
+        });
+    }
+
+    
+    
+    /**
+     * 서브분류 업데이트 요청을 처리하는 함수
+     * - 체크된 항목이 있으면 선택된 대분류(lclsf_cd) 값으로 업데이트
+     */
+    function updateSubclassification() {
+        const elements = getElements();
+        const selectedRow = document.querySelector('.classification-row.selected');
+        if (!selectedRow) {
+            alert('업데이트할 대분류가 선택되지 않았습니다.');
+            return;
+        }
+        const selectedLclsfCd = selectedRow.getAttribute('data-lclsf-cd');
+        const checkboxes = elements.subMappingContainer.querySelectorAll('input[type="checkbox"]');
+        const checkedBoxes = Array.from(checkboxes).filter(chk => chk.checked);
+        
+        if (checkedBoxes.length === 0) {
+            alert('Subclassification null');
+            return;
+        }
+        
+        const updatePromises = checkedBoxes.map(chk => {
+            const sclsfCd = chk.getAttribute('data-sclsf-cd');
+            return updateMapping(sclsfCd, selectedLclsfCd);
+        });
+        
+        Promise.all(updatePromises)
+            .then(results => {
+                const allSuccess = results.every(r => r.data.status === 'success');
+                if (allSuccess) {
+                    _GL.COMMON.showToast('Mapping updated successfully', 'success');
+                } else {
+                    _GL.COMMON.showToast('Some updates failed', 'error');
+                    console.warn('Mapping update results:', results);
+                }
+                fetchMappingData(currentPage);
+            })
+            .catch(err => {
+                console.error("Error updating mapping:", err);
+                _GL.COMMON.showToast('Mapping update failed', 'error');
+            });
+    }
+
+    
+    // SAVE 버튼 이벤트 설정을 별도 함수로 분리
+    function setupSaveButton() {
+        const elements = getElements();
+        if (elements.saveButton) {
+            elements.saveButton.removeEventListener('click', updateSubclassification);
+            elements.saveButton.addEventListener('click', updateSubclassification);
+        }
+    }
+    
+    function init() {
+        fetchMappingData(0);
+        fetchSubMappingData();
+        setupPaginationEvents();
+        setupSaveButton();
+    }
+    
+    return { init };
+})();
+
+document.addEventListener('DOMContentLoaded', function () {
+    _GL.MAPPING.init();
+});
