@@ -10,6 +10,7 @@ _GL.MAP = (function() {
     let instance = null;
     let sideControl = null;
     let activeToolbarButton = null;
+    let currentLang = 'ru';
     
     const sources = {
         vector: null,
@@ -115,7 +116,7 @@ _GL.MAP = (function() {
      * WMS 레이어 생성
      */
     function createWMSLayer(url, params, id) {
-    	const currentLang = _GL.COMMON.getCurrentLanguage();
+    	currentLang = _GL.COMMON.getCurrentLanguage();
     	
         return new ol.layer.Tile({
             source: new ol.source.TileWMS({
@@ -470,8 +471,6 @@ _GL.MAP = (function() {
      * 초기화 시 모든 캐시 데이터 로드
      */
     function initCacheData() {
-        const currentLang = _GL.COMMON.getCurrentLanguage();
-        
         // 모든 필요한 캐시 데이터 로드
         return Promise.all([
             // 필드 레이블 로드
@@ -630,7 +629,6 @@ _GL.MAP = (function() {
      * 속성정보 팝업 표시
      */
     function displayFeatureInfo(features, coordinate) {
-        const currentLang = _GL.COMMON.getCurrentLanguage();
         const elements = getElements('map');
         
         const isPopupVisible = elements.mapPopup.style.display === 'block';
@@ -813,7 +811,6 @@ _GL.MAP = (function() {
      * 토지이용 분류 데이터 로드
      */
     function loadLanduseClassifications() {
-        const currentLang = _GL.COMMON.getCurrentLanguage();
         const elements = getElements('landuse');
         
         fetch(`/klums/api/layer/classifications?lang=${currentLang}&classType=${elements.checkedClassType.value}`, {
@@ -841,7 +838,6 @@ _GL.MAP = (function() {
      */
     function updateLanduseAccordion(data, isLandType) {
         const elements = getElements('landuse');
-        const lang = _GL.COMMON.getCurrentLanguage();
         elements.accordion.innerHTML = '';
         let undefinedLabel = null;
        
@@ -855,7 +851,7 @@ _GL.MAP = (function() {
                 label.className = 'form-check';
                 label.innerHTML = `
                     <input type="checkbox" class="form-check-input child-checkbox" value="${item.type_cd}">
-                    <span class='form-check-label'>${item[`type_nm_${lang}`]}</span>
+                    <span class='form-check-label'>${item[`type_nm_${currentLang}`]}</span>
                 `;
                 
                 if (item.type_cd === 0) {
@@ -879,7 +875,7 @@ _GL.MAP = (function() {
             
             // 대분류별로 그룹화
             const groupedData = data.reduce((acc, item) => {
-                const largeClasses = item[`lclsf_nm_${lang}`];
+                const largeClasses = item[`lclsf_nm_${currentLang}`];
                 if (!acc[largeClasses]) {
                     acc[largeClasses] = {
                         code: item.lclsf_cd,
@@ -887,7 +883,7 @@ _GL.MAP = (function() {
                     };
                 }
                 acc[largeClasses].items.push({
-                    name: item[`sclsf_nm_${lang}`],
+                    name: item[`sclsf_nm_${currentLang}`],
                     code: item.sclsf_cd
                 });
                 return acc;
@@ -1295,6 +1291,7 @@ _GL.MAP = (function() {
         measure.draw = null;
         measure.measureTooltipElement = null;
         measure.helpTooltipElement = null;
+        activeToolbarButton.classList.remove('active');
     }
     
     /**

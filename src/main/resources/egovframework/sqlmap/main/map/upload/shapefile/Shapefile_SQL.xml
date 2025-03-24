@@ -28,6 +28,7 @@
 	        kdar float8,
 	        geom public.geometry(Geometry, ${value}),
 	        CONSTRAINT land_use_pk PRIMARY KEY (gid),
+	        CONSTRAINT land_use_uk UNIQUE (ink),
 	        CONSTRAINT land_use_fk1 FOREIGN KEY (uslcode) REFERENCES klums.land_symbol(symbol_cd),
 	        CONSTRAINT land_use_fk2 FOREIGN KEY (kategoria_) REFERENCES klums.land_type(type_cd)
 	    )
@@ -49,7 +50,7 @@
 		    #{layer.primechani}, #{layer.kategoria_}, #{layer.kolichestv}, #{layer.obshay_plo}, #{layer.ploshad_or},
 		    #{layer.lclsf_cd}, #{layer.sclsf_cd}, #{layer.cnt}, #{layer.kdar}, ST_GeomFromText(#{layer.geom}, #{coord})
 		)
-		<!-- ON CONFLICT ("ink")
+		ON CONFLICT ("ink")
 		DO UPDATE SET
 		    "coate_raio" = #{layer.coate_raio},
 		    "name_raion" = #{layer.name_raion},
@@ -70,28 +71,24 @@
 		    "sclsf_cd" = #{layer.sclsf_cd},
 		    "cnt" = #{layer.cnt},
 		    "kdar" = #{layer.kdar},
-		    "geom" = ST_GeomFromText(#{layer.geom}, #{coord}) -->
+		    "geom" = ST_GeomFromText(#{layer.geom}, #{coord})
 	</insert>
 	
 	<!-- 테이블을 백업으로 복사 -->
 	<update id="copyTableToBackup" parameterType="String">
 	    CREATE TABLE backup.${value} AS 
-	    SELECT * FROM data.land_use;
-	    ALTER TABLE backup.${value} ADD CONSTRAINT land_use_pk PRIMARY KEY (gid);
-	    ALTER TABLE backup.${value} ADD CONSTRAINT ${value}_fk1 FOREIGN KEY (uslcode) REFERENCES klums.land_symbol(symbol_cd);
-	    ALTER TABLE backup.${value} ADD CONSTRAINT ${value}_fk2 FOREIGN KEY (kategoria_) REFERENCES klums.land_type(type_cd);
+    	SELECT * FROM data.land_use;
 	</update>
 
 	<!-- 테이블을 백업으로 이동 -->
 	<update id="moveTableToBackup" parameterType="String">
-		ALTER TABLE data.land_use DROP CONSTRAINT IF EXISTS land_use_pk;
-		ALTER TABLE data.land_use DROP CONSTRAINT IF EXISTS land_use_fk1;
-		ALTER TABLE data.land_use DROP CONSTRAINT IF EXISTS land_use_fk2;
-		ALTER TABLE data.land_use ADD CONSTRAINT ${value}_pk PRIMARY KEY (gid);
-		ALTER TABLE data.land_use ADD CONSTRAINT ${value}_fk1 FOREIGN KEY (uslcode) REFERENCES klums.land_symbol(symbol_cd);
-		ALTER TABLE data.land_use ADD CONSTRAINT ${value}_fk2 FOREIGN KEY (kategoria_) REFERENCES klums.land_type(type_cd);
-		ALTER TABLE data.land_use SET SCHEMA backup;
-		ALTER TABLE backup.land_use RENAME TO ${value};
+	    ALTER TABLE data.land_use DROP CONSTRAINT IF EXISTS land_use_pk;
+	    ALTER TABLE data.land_use DROP CONSTRAINT IF EXISTS land_use_uk;
+	    ALTER TABLE data.land_use DROP CONSTRAINT IF EXISTS land_use_fk1;
+	    ALTER TABLE data.land_use DROP CONSTRAINT IF EXISTS land_use_fk2;
+	    ALTER TABLE data.land_use ALTER COLUMN gid DROP DEFAULT;
+	    CREATE TABLE backup.${value} AS SELECT * FROM data.land_use;
+	    DROP TABLE data.land_use;
 	</update>
 
 	<!-- 토지 이용 유형 코드 조회 -->

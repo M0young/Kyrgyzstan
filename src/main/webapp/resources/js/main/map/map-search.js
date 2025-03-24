@@ -9,6 +9,7 @@ _GL.MAP_SEARCH = (function() {
     let initialized = false;
     let instance = null;
     let currentPage = 1;
+    let currentLang = 'ru';
     
     /**
      * DOM 요소 가져오기
@@ -33,7 +34,7 @@ _GL.MAP_SEARCH = (function() {
     function searchRegion(page = 1, searchTerm = '') {
     	const elements = getElements();
     	const pageUnit = parseInt(elements.pageUnit.value);
-    	const currentLang = _GL.COMMON.getCurrentLanguage();
+    	currentLang = _GL.COMMON.getCurrentLanguage();
     	
     	elements.resultTable.innerHTML = `
             <tr>

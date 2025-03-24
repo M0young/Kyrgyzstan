@@ -1,64 +1,138 @@
 package egovframework.main.map.symbol.controller;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.annotation.Resource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import egovframework.rte.ptl.mvc.tags.ui.pagination.PaginationInfo;
-import egovframework.main.map.region.service.RegionService;
-import egovframework.main.map.region.dto.RegionDTO;
+import egovframework.main.map.symbol.service.SymbolService;
+import egovframework.main.map.symbol.dto.SymbolDTO;
+import egovframework.common.component.MessageProvider;
 import egovframework.common.response.ApiResponse;
+import egovframework.environment.security.SecurityUtils;
 
 @RestController
-@RequestMapping("/symbol")
+@RequestMapping("/api/symbol")
 public class SymbolController {
     
-    @Resource(name = "regionService")
-    private RegionService regionService;
+    private static final Logger logger = LoggerFactory.getLogger(SymbolController.class);
     
-    @GetMapping("/search")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> searchRegion(
-            @RequestParam String search, @RequestParam String lang,
-            @RequestParam int pageIndex, @RequestParam int pageUnit) {
+    @Resource(name = "symbolService")
+    private SymbolService symbolService;
+    
+    @Resource
+    private MessageProvider messageProvider;
+    
+    // 심볼 목록 조회
+    @GetMapping("/list")
+    public ResponseEntity<ApiResponse<List<SymbolDTO>>> getSymbolList(
+            @RequestParam String lang) {
         try {
-            RegionDTO regionDTO = new RegionDTO();
-            regionDTO.setSearch(search);
-            regionDTO.setLang(lang);
-            regionDTO.setPageIndex(pageIndex);
-            regionDTO.setPageUnit(pageUnit);
-            regionDTO.setPageSize(5);
-            
-            PaginationInfo paginationInfo = new PaginationInfo();
-            paginationInfo.setCurrentPageNo(regionDTO.getPageIndex());
-            paginationInfo.setRecordCountPerPage(regionDTO.getPageUnit());
-            paginationInfo.setPageSize(regionDTO.getPageSize());
-            
-            regionDTO.setFirstIndex(paginationInfo.getFirstRecordIndex());
-            
-            // 전체 데이터 수 조회
-            int totalCount = regionService.selectRegionListCount(regionDTO);
-            paginationInfo.setTotalRecordCount(totalCount);
-            
-            // 목록 데이터 조회
-            List<?> list = regionService.selectRegionList(regionDTO);
-            
-            Map<String, Object> resultMap = new HashMap<>();
-            resultMap.put("list", list);
-            resultMap.put("count", totalCount);
-            resultMap.put("paginationInfo", paginationInfo);
-            
-            return ApiResponse.success(resultMap);
-            
+            List<SymbolDTO> symbolList = symbolService.selectSymbolList(lang);
+            return ApiResponse.success(symbolList);
         } catch (Exception e) {
-            return ApiResponse.error("검색 중 오류가 발생했습니다.");
+            logger.error("심볼 목록 조회 중 오류 발생: ", e);
+            return ApiResponse.error("symbol.list.failed");
+        }
+    }
+    
+    // 심볼 파일 목록 조회
+    @GetMapping("/files")
+    public ResponseEntity<ApiResponse<List<SymbolDTO>>> getSymbolFileList() {
+        try {
+            List<SymbolDTO> fileList = symbolService.selectSymbolFileList();
+            return ApiResponse.success(fileList);
+        } catch (Exception e) {
+            logger.error("심볼 파일 목록 조회 중 오류 발생: ", e);
+            return ApiResponse.error("symbol.file.list.failed");
+        }
+    }
+    
+    // 특정 심볼 상세 조회
+    @GetMapping("/{symbolCd}")
+    public ResponseEntity<ApiResponse<SymbolDTO>> getSymbolById(
+            @PathVariable int symbolCd) {
+        try {
+            SymbolDTO symbol = symbolService.selectSymbolById(symbolCd);
+            if (symbol == null) {
+                return ApiResponse.error("symbol.not.found");
+            }
+            return ApiResponse.success(symbol);
+        } catch (Exception e) {
+            logger.error("심볼 상세 조회 중 오류 발생: ", e);
+            return ApiResponse.error("symbol.detail.failed");
+        }
+    }
+    
+    // 심볼 등록
+    @PostMapping
+    public ResponseEntity<ApiResponse<SymbolDTO>> addSymbol(
+            @RequestBody SymbolDTO symbolDTO) {
+        try {
+            int userNo = SecurityUtils.getUserNo();
+            symbolDTO.setRgtr(userNo);
+            
+            int result = symbolService.insertSymbol(symbolDTO);
+            if (result > 0) {
+                return ApiResponse.success(symbolDTO, "symbol.add.success");
+            } else {
+                return ApiResponse.error("symbol.add.failed");
+            }
+        } catch (Exception e) {
+            logger.error("심볼 등록 중 오류 발생: ", e);
+            return ApiResponse.error("symbol.add.error");
+        }
+    }
+    
+    // 심볼 수정
+    @PutMapping("/{symbolCd}")
+    public ResponseEntity<ApiResponse<SymbolDTO>> updateSymbol(
+            @PathVariable int symbolCd,
+            @RequestBody SymbolDTO symbolDTO) {
+        try {
+            int userNo = SecurityUtils.getUserNo();
+            
+            symbolDTO.setSymbol_cd(symbolCd);
+            symbolDTO.setMdfr(userNo);
+            
+            int result = symbolService.updateSymbol(symbolDTO);
+            if (result > 0) {
+                return ApiResponse.success(symbolDTO, "symbol.update.success");
+            } else {
+                return ApiResponse.error("symbol.update.failed");
+            }
+        } catch (Exception e) {
+            logger.error("심볼 수정 중 오류 발생: ", e);
+            return ApiResponse.error("symbol.update.error");
+        }
+    }
+    
+    // 심볼 삭제
+    @DeleteMapping("/{symbolCd}")
+    public ResponseEntity<ApiResponse<Void>> deleteSymbol(
+            @PathVariable int symbolCd) {
+        try {
+            int result = symbolService.deleteSymbol(symbolCd);
+            if (result > 0) {
+                return ApiResponse.success(null, "symbol.delete.success");
+            } else {
+                return ApiResponse.error("symbol.delete.failed");
+            }
+        } catch (Exception e) {
+            logger.error("심볼 삭제 중 오류 발생: ", e);
+            return ApiResponse.error("symbol.delete.error");
         }
     }
 }

@@ -22,6 +22,10 @@ public class SymbolDAO extends EgovAbstractMapper {
         return selectList("symbolDAO.selectSymbolList", lang);
     }
     
+    public List<SymbolDTO> selectSymbolFileList() {
+        return selectList("symbolDAO.selectSymbolFileList");
+    }
+    
     public SymbolDTO selectSymbolById(int symbolCd) {
         return selectOne("symbolDAO.selectSymbolById", symbolCd);
     }
@@ -34,7 +38,7 @@ public class SymbolDAO extends EgovAbstractMapper {
         return update("symbolDAO.updateSymbol", symbolDTO);
     }
     
-    public int removeSymbol(int symbolCd) {
-        return update("symbolDAO.removeSymbol", symbolCd);
+    public int deleteSymbol(int symbolCd) {
+        return update("symbolDAO.deleteSymbol", symbolCd);
     }
 }

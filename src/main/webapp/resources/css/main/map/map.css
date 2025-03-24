@@ -11,7 +11,7 @@ body, html {
 .map-popup {
     position: absolute;
     height: 490px;
-    width: 465px;
+    width: 550px;
     min-width: 300px;
     min-height: 278px;
     max-width: 50vw;
@@ -55,7 +55,7 @@ body, html {
     max-width: 100vw;
     max-height: calc(100vh - 56px);
     left: 3rem;
-    top: calc(56vh + 7px);
+    top: calc(56vh + 1rem);
     border-radius: 4px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     resize: both;
@@ -79,12 +79,6 @@ body, html {
 ..map-popup-edit .table-responsive {
     flex: 1;
     overflow-y: auto;
-}
-
-.map-popup-edit thead {
-	position: sticky;
-    top: 0;
-    z-index: 1;
 }
 
 .map-popup-edit td {
@@ -311,10 +305,52 @@ body, html {
 
 
 /* =====================================================
-    sidebar - MANAGE
+    sidebar - MANAGE - Map Edit
 ======================================================*/
 #sidebar-manage .btn:disabled {
     border-color: var(--tblr-border-color);
+}
+
+
+/* =====================================================
+    sidebar - MANAGE - Symbol Edit
+======================================================*/
+/* 전체 심볼 컨테이너 - 페이지 전체 높이 사용 */
+.symbol-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: calc(100vh - 135px);
+    overflow: hidden;
+}
+
+/* 테이블 컨테이너 - 남은 공간 모두 사용하되 스크롤 가능 */
+.symbol-table-container {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 150px; /* 최소 높이 설정 */
+    margin-bottom: 1rem;
+}
+
+/* 미리보기 컨테이너 - 고정 높이 또는 컨텐츠에 맞게 조정 */
+.symbol-preview-container {
+    flex-shrink: 0; /* 크기 고정 */
+    min-height: 200px; /* 최소 높이 */
+    max-height: 300px; /* 최대 높이 */
+    overflow: hidden;
+}
+
+/* 미리보기 이미지 스타일 */
+#symbolPreview img {
+	width: 300px;
+    max-height: 200px; /* 미리보기 최대 높이 */
+    object-fit: contain; /* 비율 유지하면서 컨테이너에 맞춤 */
+}
+
+/* 카드 바디 높이 조정 */
+.symbol-preview-container .card-body {
+    height: calc(300px - 3rem); /* 카드 헤더 높이 고려 */
+    overflow: hidden;
 }
 
 

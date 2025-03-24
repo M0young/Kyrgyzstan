@@ -20,6 +20,10 @@ public class SymbolService extends EgovAbstractServiceImpl {
         return symbolDAO.selectSymbolList(lang);
     }
     
+    public List<SymbolDTO> selectSymbolFileList() {
+        return symbolDAO.selectSymbolFileList();
+    }
+    
     public SymbolDTO selectSymbolById(int symbolCd) {
         return symbolDAO.selectSymbolById(symbolCd);
     }
@@ -32,7 +36,7 @@ public class SymbolService extends EgovAbstractServiceImpl {
         return symbolDAO.updateSymbol(symbolDTO);
     }
     
-    public int removeSymbol(int symbolCd) {
-        return symbolDAO.removeSymbol(symbolCd);
+    public int deleteSymbol(int symbolCd) {
+        return symbolDAO.deleteSymbol(symbolCd);
     }
 }

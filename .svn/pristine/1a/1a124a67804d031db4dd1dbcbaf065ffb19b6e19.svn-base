@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="shapefileDAO">
+    <!-- 테이블 생성 -->
+    <update id="createShapefileTable" parameterType="int">
+	    CREATE TABLE IF NOT EXISTS data.land_use (
+	    	gid SERIAL,
+	        ink varchar,
+	        ink_1 varchar(255),
+	        coate_raio varchar(255),
+	        name_raion varchar(255),
+	        coate_aa varchar(255),
+	        name_aa varchar(255),
+	        nomer_kont int,
+	        staryi_nom int,
+	        vid_ugodii varchar(255),
+	        uslcode int,
+	        ispolzovan varchar(255),
+	        opisanie varchar(255),
+	        primechani varchar(255), 
+	        kategoria_ int,
+	        kolichestv int,
+	        obshay_plo float8,
+	        ploshad_or float8,
+	        lclsf_cd int,
+	        sclsf_cd int,
+	        cnt float8,
+	        kdar float8,
+	        geom public.geometry(Geometry, ${value}),
+	        CONSTRAINT land_use_pk PRIMARY KEY (gid),
+	        CONSTRAINT land_use_fk1 FOREIGN KEY (uslcode) REFERENCES klums.land_symbol(symbol_cd),
+	        CONSTRAINT land_use_fk2 FOREIGN KEY (kategoria_) REFERENCES klums.land_type(type_cd)
+	    )
+	</update>
+
+	<!-- 데이터 삽입 -->
+	<insert id="insertShapefileData" parameterType="map">
+	    INSERT INTO data.land_use
+		(
+		    "ink", "coate_raio", "name_raion", "coate_aa", "name_aa", "nomer_kont",
+		    "staryi_nom", "vid_ugodii", "uslcode", "ispolzovan", "opisanie",
+		    "primechani", "kategoria_", "kolichestv", "obshay_plo", "ploshad_or",
+		    "lclsf_cd", "sclsf_cd", "cnt", "kdar", "geom"
+		)
+		VALUES 
+		(
+		    #{layer.ink}, #{layer.coate_raio}, #{layer.name_raion}, #{layer.coate_aa}, #{layer.name_aa}, #{layer.nomer_kont},
+		    #{layer.staryi_nom}, #{layer.vid_ugodii}, #{layer.uslcode}, #{layer.ispolzovan}, #{layer.opisanie},
+		    #{layer.primechani}, #{layer.kategoria_}, #{layer.kolichestv}, #{layer.obshay_plo}, #{layer.ploshad_or},
+		    #{layer.lclsf_cd}, #{layer.sclsf_cd}, #{layer.cnt}, #{layer.kdar}, ST_GeomFromText(#{layer.geom}, #{coord})
+		)
+		<!-- ON CONFLICT ("ink")
+		DO UPDATE SET
+		    "coate_raio" = #{layer.coate_raio},
+		    "name_raion" = #{layer.name_raion},
+		    "coate_aa" = #{layer.coate_aa},
+		    "name_aa" = #{layer.name_aa},
+		    "nomer_kont" = #{layer.nomer_kont},
+		    "staryi_nom" = #{layer.staryi_nom},
+		    "vid_ugodii" = #{layer.vid_ugodii},
+		    "uslcode" = #{layer.uslcode},
+		    "ispolzovan" = #{layer.ispolzovan},
+		    "opisanie" = #{layer.opisanie},
+		    "primechani" = #{layer.primechani},
+		    "kategoria_" = #{layer.kategoria_},
+		    "kolichestv" = #{layer.kolichestv},
+		    "obshay_plo" = #{layer.obshay_plo},
+		    "ploshad_or" = #{layer.ploshad_or},
+		    "lclsf_cd" = #{layer.lclsf_cd},
+		    "sclsf_cd" = #{layer.sclsf_cd},
+		    "cnt" = #{layer.cnt},
+		    "kdar" = #{layer.kdar},
+		    "geom" = ST_GeomFromText(#{layer.geom}, #{coord}) -->
+	</insert>
+	
+	<!-- 테이블을 백업으로 복사 -->
+	<update id="copyTableToBackup" parameterType="String">
+	    -- 데이터 복사
+	    CREATE TABLE backup.${value} AS 
+	    SELECT * FROM data.land_use;
+	    
+	    -- 기본 키 설정
+	    ALTER TABLE backup.${value} ADD CONSTRAINT ${value}_pk PRIMARY KEY (gid);
+	    
+	    -- 외래 키 설정
+	    ALTER TABLE backup.${value} ADD CONSTRAINT ${value}_fk1 FOREIGN KEY (uslcode) REFERENCES klums.land_symbol(symbol_cd);
+	    ALTER TABLE backup.${value} ADD CONSTRAINT ${value}_fk2 FOREIGN KEY (kategoria_) REFERENCES klums.land_type(type_cd);
+	    
+	    -- 새 시퀀스 생성 및 연결
+	    CREATE SEQUENCE backup.${value}_gid_seq;
+	    ALTER TABLE backup.${value} ALTER COLUMN gid SET DEFAULT nextval('backup.${value}_gid_seq');
+	    
+	    -- 시퀀스 현재값을 테이블 최대값으로 설정
+	    SELECT setval('backup.${value}_gid_seq', (SELECT COALESCE(MAX(gid), 0) FROM backup.${value}));
+	</update>
+
+	<!-- 테이블을 백업으로 이동 -->
+	<update id="moveTableToBackup" parameterType="String">
+	    -- 기존 제약조건 제거
+	    ALTER TABLE data.land_use DROP CONSTRAINT IF EXISTS land_use_pk;
+	    ALTER TABLE data.land_use DROP CONSTRAINT IF EXISTS land_use_fk1;
+	    ALTER TABLE data.land_use DROP CONSTRAINT IF EXISTS land_use_fk2;
+	    
+	    -- 시퀀스 의존성 제거
+	    ALTER TABLE data.land_use ALTER COLUMN gid DROP DEFAULT;
+	    
+	    -- 먼저 데이터를 새 테이블로 복사 (시퀀스 의존성 없이)
+	    CREATE TABLE backup.${value} AS SELECT * FROM data.land_use;
+	    
+	    -- 새 테이블에 제약조건 추가
+	    ALTER TABLE backup.${value} ADD CONSTRAINT ${value}_pk PRIMARY KEY (gid);
+	    ALTER TABLE backup.${value} ADD CONSTRAINT ${value}_fk1 FOREIGN KEY (uslcode) REFERENCES klums.land_symbol(symbol_cd);
+	    ALTER TABLE backup.${value} ADD CONSTRAINT ${value}_fk2 FOREIGN KEY (kategoria_) REFERENCES klums.land_type(type_cd);
+	    
+	    -- 새 시퀀스 생성 (이름 충돌 방지를 위해 다른 이름 사용)
+	    CREATE SEQUENCE backup.${value}_gid_seq;
+	    ALTER TABLE backup.${value} ALTER COLUMN gid SET DEFAULT nextval('backup.${value}_gid_seq');
+	    SELECT setval('backup.${value}_gid_seq', (SELECT COALESCE(MAX(gid), 0) FROM backup.${value}));
+	    
+	    -- 원본 테이블 삭제
+	    DROP TABLE data.land_use;
+	</update>
+
+	<!-- 토지 이용 유형 코드 조회 -->
+	<select id="selectLandUseTypeCode" parameterType="ShapefileDTO" resultType="ShapefileDTO">
+	    SELECT lclsf_cd, sclsf_cd FROM klums.land_sclsf
+	    WHERE fld_nm = #{fld_nm}
+	</select>
+	
+  	<!-- 테이블 존재 여부 확인 -->
+	<select id="checkTableExists" parameterType="String" resultType="int">
+	    SELECT CASE 
+	        WHEN EXISTS (
+	            SELECT 1 
+	            FROM information_schema.tables 
+	            WHERE table_schema = 'data' 
+	            AND table_name = 'land_use'
+	        ) 
+	        THEN 1 
+	        ELSE 0 
+	    END
+	</select>
+
+ 	<!-- 레이어의 SRID 조회 -->
+    <select id="selectSridFromExistLayer" parameterType="String" resultType="int">
+	    SELECT CASE 
+	        WHEN EXISTS (
+	            SELECT 1 
+	            FROM information_schema.tables 
+	            WHERE table_schema = 'data' 
+	            AND table_name = 'land_use'
+	        )
+	        THEN (
+	            SELECT ST_SRID(geom)
+	            FROM data.land_use
+	            LIMIT 1
+	        )
+	        ELSE 0
+	    END AS srid
+	</select>
+</mapper>

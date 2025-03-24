@@ -1,0 +1,470 @@
+/*========================================================
+    DATE: 2024. 03
+    AUTHOR: MOYOUNG
+    DESC: Symbol Edit Module
+========================================================*/
+_GL.MAP_SYMBOL = (function() {
+    'use strict';
+    
+    let initialized = false;
+    let instance = null;
+    let selectedSymbolId = null;
+    let symbolImages = {}; // 심볼 이미지 캐시
+    
+    /**
+     * DOM 요소 가져오기
+     */
+    function getElements() {
+        return {
+            symbolContainer: document.querySelector('#tabs-symbol-edit'),
+            symbolListContainer: document.querySelector('#symbol-list-container'),
+            symbolGridContainer: document.querySelector('#symbol-grid'),
+            symbolSearchInput: document.querySelector('#symbol-search')
+        };
+    };
+   
+    /**
+     * 심볼 그리드 렌더링
+     */
+    function renderSymbolGrid() {
+        const elements = getElements();
+        const symbols = _GL.MAP.codeCache.symbol;
+        
+        if (!elements.symbolGridContainer) return;
+        
+        // 그리드 컨테이너 비우기
+        elements.symbolGridContainer.innerHTML = '';
+        
+        // 그리드에 심볼 아이템 추가
+        Object.entries(symbols).forEach(([symbolId, symbolName]) => {
+            const symbolItem = document.createElement('div');
+            symbolItem.className = 'symbol-item';
+            symbolItem.setAttribute('data-symbol-id', symbolId);
+            symbolItem.setAttribute('title', symbolName);
+            
+            if (selectedSymbolId === symbolId) {
+                symbolItem.classList.add('selected');
+            }
+            
+            // 심볼 이미지가 있다면 이미지를 사용하고, 없다면 기본 아이콘 사용
+            if (symbolImages[symbolId]) {
+                symbolItem.innerHTML = `
+                    <img src="${symbolImages[symbolId]}" alt="${symbolName}">
+                    <span class="symbol-id">${symbolId}</span>
+                `;
+            } else {
+                // 심볼 아이디가 숫자인 경우 파일 아이콘으로 표시
+                symbolItem.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                        <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
+                        <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"></path>
+                    </svg>
+                    <span class="symbol-id">${symbolId}</span>
+                `;
+            }
+            
+            elements.symbolGridContainer.appendChild(symbolItem);
+            
+            // 클릭 이벤트 추가
+            symbolItem.addEventListener('click', function() {
+                selectSymbol(symbolId);
+            });
+        });
+    }
+    
+    /**
+     * 심볼 테이블 리스트 렌더링
+     */
+    function renderSymbolList() {
+        const elements = getElements();
+        const symbols = _GL.MAP.codeCache.symbol;
+        
+        if (!elements.symbolListContainer) return;
+        
+        // 테이블 바디 찾기
+        const tbody = elements.symbolListContainer.querySelector('tbody');
+        if (!tbody) return;
+        
+        // 테이블 내용 비우기
+        tbody.innerHTML = '';
+        
+        // 심볼 데이터를 테이블 행으로 변환
+        Object.entries(symbols).forEach(([id, name]) => {
+            const tr = document.createElement('tr');
+            
+            // 심볼 이미지 또는 기본 아이콘
+            let symbolPreview = '';
+            if (symbolImages[id]) {
+                symbolPreview = `<img src="${symbolImages[id]}" alt="${name}" style="width: 32px; height: 32px;">`;
+            } else {
+                symbolPreview = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                        <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
+                        <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"></path>
+                    </svg>
+                `;
+            }
+            
+            tr.innerHTML = `
+                <td>${id}</td>
+                <td>${symbolPreview}</td>
+                <td>${name}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-primary edit-symbol" data-symbol-id="${id}">수정</button>
+                </td>
+            `;
+            
+            tbody.appendChild(tr);
+            
+            // 행 클릭 이벤트 추가 (수정 버튼 외)
+            tr.addEventListener('click', function(e) {
+                // 버튼 클릭은 처리하지 않음 (버튼 이벤트가 별도로 처리됨)
+                if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                    return;
+                }
+                
+                selectSymbol(id);
+            });
+        });
+    }
+    
+    /**
+     * 심볼 선택
+     */
+    function selectSymbol(symbolId) {
+        const elements = getElements();
+        const symbols = _GL.MAP.codeCache.symbol;
+        
+        // 그리드 아이템 선택 업데이트
+        if (elements.symbolGridContainer) {
+            // 이전 선택 해제
+            const prevSelected = elements.symbolGridContainer.querySelector('.symbol-item.selected');
+            if (prevSelected) {
+                prevSelected.classList.remove('selected');
+            }
+            
+            // 새 선택 적용
+            const newSelected = elements.symbolGridContainer.querySelector(`.symbol-item[data-symbol-id="${symbolId}"]`);
+            if (newSelected) {
+                newSelected.classList.add('selected');
+                
+                // 스크롤해서 보이게 처리
+                newSelected.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+        
+        // 리스트 행 선택 업데이트
+        if (elements.symbolListContainer) {
+            const tbody = elements.symbolListContainer.querySelector('tbody');
+            if (tbody) {
+                const rows = tbody.querySelectorAll('tr');
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length > 0 && cells[0].textContent === symbolId.toString()) {
+                        row.classList.add('selected');
+                    } else {
+                        row.classList.remove('selected');
+                    }
+                });
+            }
+        }
+        
+        selectedSymbolId = symbolId;
+    }
+    
+    /**
+     * 초기 UI 설정
+     */
+    function setupUI() {
+        renderSymbolGrid();
+        renderSymbolList();
+    }
+    
+/* =====================================================
+    Symbol Edit Main
+======================================================*/
+    /**
+     * 심볼 수정 모달 표시
+     */
+    function showEditModal(symbolId) {
+        const symbols = _GL.MAP.codeCache.symbol;
+        
+        // 모달 요소 가져오기
+        const editModal = new bootstrap.Modal(document.getElementById('symbolEditModal'));
+        
+        // 폼 데이터 설정
+        document.getElementById('symbol-id').value = symbolId;
+        document.getElementById('symbol-name').value = symbols[symbolId] || '';
+        
+        // 심볼 선택 업데이트
+        selectSymbol(symbolId);
+        
+        // 모달 표시
+        editModal.show();
+    }
+    
+    /**
+     * 심볼 저장
+     */
+    function saveSymbol() {
+        const symbolId = document.getElementById('symbol-id').value;
+        const symbolName = document.getElementById('symbol-name').value;
+        
+        if (symbolId && symbolName) {
+            // 심볼 데이터 업데이트
+            _GL.MAP.codeCache.symbol[symbolId] = symbolName;
+            
+            // UI 업데이트
+            renderSymbolGrid();
+            renderSymbolList();
+            
+            // 모달 숨기기
+            const editModal = bootstrap.Modal.getInstance(document.getElementById('symbolEditModal'));
+            if (editModal) {
+                editModal.hide();
+            }
+            
+            // 선택 상태 유지
+            selectSymbol(symbolId);
+            
+            // 성공 메시지 표시
+            showSuccessToast('심볼 정보가 저장되었습니다.');
+        } else {
+            alert('심볼명을 입력해주세요.');
+        }
+    }
+    
+    /**
+     * 심볼 검색
+     */
+    function searchSymbol() {
+        const elements = getElements();
+        const searchText = elements.symbolSearchInput.value.toLowerCase();
+        const symbols = _GL.MAP.codeCache.symbol;
+        
+        // 그리드 아이템 필터링
+        if (elements.symbolGridContainer) {
+            const items = elements.symbolGridContainer.querySelectorAll('.symbol-item');
+            items.forEach(item => {
+                const symbolId = item.getAttribute('data-symbol-id');
+                const symbolName = symbols[symbolId].toLowerCase() || '';
+                
+                if (symbolName.includes(searchText) || symbolId.includes(searchText)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+        
+        // 테이블 행 필터링
+        if (elements.symbolListContainer) {
+            const rows = elements.symbolListContainer.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 3) {
+                    const id = cells[0].textContent;
+                    const name = cells[2].textContent.toLowerCase();
+                    
+                    if (name.includes(searchText) || id.includes(searchText)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            });
+        }
+    }
+    
+    /**
+     * 심볼 추가 모달 표시
+     */
+    function showAddModal() {
+        // 새 ID 생성 (기존 최대 ID + 1)
+        const symbols = _GL.MAP.codeCache.symbol;
+        const maxId = Math.max(...Object.keys(symbols).map(id => parseInt(id) || 0));
+        const newId = maxId + 1;
+        
+        // 모달 요소 가져오기
+        const addModal = new bootstrap.Modal(document.getElementById('symbolAddModal'));
+        
+        // 폼 데이터 설정
+        document.getElementById('new-symbol-id').value = newId;
+        document.getElementById('new-symbol-name').value = '';
+        
+        // 모달 표시
+        addModal.show();
+    }
+    
+    /**
+     * 새 심볼 추가
+     */
+    function addSymbol() {
+        const symbolId = document.getElementById('new-symbol-id').value;
+        const symbolName = document.getElementById('new-symbol-name').value;
+        
+        if (symbolId && symbolName) {
+            // 심볼 데이터 추가
+            _GL.MAP.codeCache.symbol[symbolId] = symbolName;
+            
+            // UI 업데이트
+            renderSymbolGrid();
+            renderSymbolList();
+            
+            // 모달 숨기기
+            const addModal = bootstrap.Modal.getInstance(document.getElementById('symbolAddModal'));
+            if (addModal) {
+                addModal.hide();
+            }
+            
+            // 새로 추가된 심볼 선택
+            selectSymbol(symbolId);
+            
+            // 성공 메시지 표시
+            showSuccessToast('새 심볼이 추가되었습니다.');
+        } else {
+            alert('심볼명을 입력해주세요.');
+        }
+    }
+    
+    /**
+     * 성공 메시지 표시
+     */
+    function showSuccessToast(message) {
+        // 이미 toast 컨테이너가 있는지 확인
+        let toastContainer = document.querySelector('.toast-container');
+        
+        if (!toastContainer) {
+            // 토스트 컨테이너 생성
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // 토스트 요소 생성
+        const toastEl = document.createElement('div');
+        toastEl.className = 'toast align-items-center text-white bg-success border-0';
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toastEl);
+        
+        // 토스트 초기화 및 표시
+        const toast = new bootstrap.Toast(toastEl, {
+            autohide: true,
+            delay: 3000
+        });
+        
+        toast.show();
+    }
+    
+/* =====================================================
+    Event Handlers
+======================================================*/
+    /**
+     * 심볼 수정 버튼 클릭 이벤트 핸들러
+     */
+    function handleEditSymbolClick(e) {
+        if (e.target.classList.contains('edit-symbol')) {
+            const symbolId = e.target.getAttribute('data-symbol-id');
+            showEditModal(symbolId);
+        }
+    }
+    
+    /**
+     * 저장 버튼 클릭 이벤트 핸들러
+     */
+    function handleSaveSymbolClick() {
+        saveSymbol();
+    }
+    
+    /**
+     * 검색 버튼 클릭 이벤트 핸들러
+     */
+    function handleSearchClick() {
+        searchSymbol();
+    }
+    
+    /**
+     * 검색 입력 이벤트 핸들러 (엔터키 처리)
+     */
+    function handleSearchKeyPress(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchSymbol();
+        }
+    }
+    
+    /**
+     * 심볼 추가 버튼 클릭 이벤트 핸들러
+     */
+    function handleAddSymbolClick() {
+        showAddModal();
+    }
+    
+    /**
+     * 심볼 추가 제출 버튼 클릭 이벤트 핸들러
+     */
+    function handleAddSymbolSubmitClick() {
+        addSymbol();
+    }
+    
+/* =====================================================
+    Event Listeners
+======================================================*/
+    function initializeEventListeners() {
+        const elements = getElements();
+        
+        // 처음 로드시 UI 설정
+        setupUI();
+        
+        // 심볼 리스트의 수정 버튼 클릭 이벤트
+        if (elements.symbolListContainer) {
+            elements.symbolListContainer.addEventListener('click', handleEditSymbolClick);
+        }
+        
+        // 저장 버튼 클릭 이벤트
+        document.getElementById('save-symbol-btn').addEventListener('click', handleSaveSymbolClick);
+        
+        // 검색 버튼 클릭 이벤트
+        document.getElementById('search-symbol-btn').addEventListener('click', handleSearchClick);
+        
+        // 검색 입력 엔터키 이벤트
+        if (elements.symbolSearchInput) {
+            elements.symbolSearchInput.addEventListener('keypress', handleSearchKeyPress);
+        }
+        
+        // 심볼 추가 버튼 클릭 이벤트
+        document.getElementById('add-symbol-btn').addEventListener('click', handleAddSymbolClick);
+        
+        // 심볼 추가 제출 버튼 클릭 이벤트
+        document.getElementById('add-symbol-submit-btn').addEventListener('click', handleAddSymbolSubmitClick);
+    }
+    
+    // public API
+    return {
+        init: function() {
+            if (initialized) return;
+            instance = _GL.MAP.getInstance();
+            initializeEventListeners();
+            initialized = true;
+        }
+    };
+})();
+// DOM 로드 완료 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    _GL.MAP_SYMBOL.init();
+});

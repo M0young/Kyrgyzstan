@@ -11,11 +11,14 @@ _GL.NOTIFICATION = (function() {
     let eventSource = null;
     let sessionTimerInterval = null;
     let reconnectTimer = null;
-    let reconnectAttempts = 0;
-    let reconnectDelay = 1000;
-    let isRememberMeActive = false;
     
-    const MAX_RECONNECT_ATTEMPTS = 5;
+    // 세션 타이머 관련 변수
+    let sessionExpiryTime = 0;
+    let sessionModalActive = false;
+    
+    // 재배열 관련 변수
+    let reconnectAttemptCount = 0;
+    const maxReconnectAttemps = 5;
     
     /**
      * SSE 연결 초기화
@@ -32,19 +35,92 @@ _GL.NOTIFICATION = (function() {
         }
         
         try {
-            // Remember-me 상태 먼저 확인하고 이벤트 소스 초기화
-            checkRememberMeStatus()
-                .then(status => {
-                    isRememberMeActive = status;
-                    initEventSource();
-                })
-                .catch(() => {
-                    isRememberMeActive = false;
-                    initEventSource();
-                });
+            // 이벤트 소스 초기화
+            initEventSource();
+            
+            // 서버에서 현재 세션 상태 확인
+            checkSessionStatus();
+            
+            document.addEventListener('visibilitychange', handleVisibilityChange);
         } catch (error) {
+            console.error('연결 초기화 오류:', error);
             scheduleReconnect();
         }
+    }
+    
+    /**
+     * 페이지 가시성 변경 처리
+     */
+    function handleVisibilityChange() {
+        if (document.visibilityState === 'visible') {
+            // 탭이 활성화되면 서버에서 현재 세션 상태 확인
+            checkSessionStatus();
+        }
+    }
+    
+    /**
+     * 서버에서 세션 상태 확인
+     */
+    function checkSessionStatus() {
+        if (!_GL.csrf || !_GL.csrf.token) {
+        	return;
+        }
+        
+        return fetch('/klums/api/notifications/check-session-status', {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': _GL.csrf.token
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (response.status === 401 || response.status === 403) {
+            	// 인증 오류 시 로그인 페이지로 리다이렉트
+            	window.location.href = '/klums/auth/login';
+                throw new Error('세션이 만료되었습니다.');
+            }
+            
+            if (!response.ok) {
+                throw new Error('서버 응답 오류: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (!result.success) {
+                throw new Error('상태 확인 실패');
+            }
+            
+            const data = result.data;
+            
+            // 세션 상태에 따른 처리
+            switch(data.status) {
+	            case 'EXPIRING':
+	                // 모달이 이미 열려 있지 않은 경우에만 표시
+	                if (!sessionModalActive) {
+	                    handleSessionExpiring({
+	                        data: {
+	                            secondsRemaining: data.secondsRemaining || 300,
+	                            message: data.message
+	                        }
+	                    });
+	                }
+	                break;
+	            case 'EXPIRED':
+	                handleSessionExpired({
+	                    action: data.action,
+	                    message: data.message
+	                });
+	                break;
+                case 'ACTIVE':
+                    break;
+            }
+            
+            return data;
+        })
+        .catch(error => {
+            console.error('세션 상태 확인 오류:', error);
+            return null;
+        });
     }
     
     /**
@@ -61,32 +137,37 @@ _GL.NOTIFICATION = (function() {
             // EventSource 생성
             eventSource = new EventSource('/klums/api/notifications/subscribe');
             
+            eventSource.onopen = function() {
+            	reconnectAttemptCount = 0;
+            };
+            
             // 이벤트 리스너 등록
-            eventSource.addEventListener('connection', handleConnectionEvent);
             eventSource.addEventListener('notification', handleNotificationEvent);
             eventSource.addEventListener('keepalive', function() {
-                // keepalive 이벤트 처리 (빈 함수)
+            	reconnectAttemptCount = 0;
             });
             
-            eventSource.onmessage = handleDefaultMessage;
-            eventSource.onerror = handleConnectionError;
+            eventSource.onerror = function(event) {
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+                
+                reconnectAttemptCount++;
+                if (reconnectAttemptCount >= maxReconnectAttemps) {
+                	disconnect();
+                    return;
+                }
+                
+                let reconnectDelay = Math.min(1000 * Math.pow(2, reconnectAttemptCount - 1), 30000);
+                
+                setTimeout(function() {
+                    initEventSource();
+                }, reconnectDelay);
+            };
             
         } catch (error) {
             scheduleReconnect();
-        }
-    }
-    
-    /**
-     * 연결 이벤트 처리
-     */
-    function handleConnectionEvent(event) {
-        reconnectAttempts = 0;
-        reconnectDelay = 1000;
-        
-        try {
-            JSON.parse(event.data);
-        } catch (e) {
-            // 파싱 오류 무시
         }
     }
     
@@ -105,10 +186,6 @@ _GL.NOTIFICATION = (function() {
                     handleSessionExpired(notification);
                     break;
                 default:
-                    // 기타 알림 유형 처리
-                    if (notification.message) {
-                        _GL.COMMON.showToast(notification.message, notification.severity || 'info');
-                    }
                     break;
             }
         } catch (e) {
@@ -117,91 +194,21 @@ _GL.NOTIFICATION = (function() {
     }
     
     /**
-     * 기본 메시지 처리
-     */
-    function handleDefaultMessage(event) {
-        try {
-            const data = JSON.parse(event.data);
-            
-            if (data.message) {
-                _GL.COMMON.showToast(data.message, 'info');
-            }
-        } catch (e) {
-            // 파싱 오류 무시
-        }
-    }
-    
-    /**
-     * 연결 오류 처리
-     */
-    function handleConnectionError() {
-        scheduleReconnect();
-    }
-    
-    /**
      * 재연결 예약
      */
     function scheduleReconnect() {
         reconnectAttempts++;
         
-        if (reconnectAttempts <= MAX_RECONNECT_ATTEMPTS) {
+        if (reconnectAttempts <= maxReconnectAttemps) {
+        	let reconnectDelay = Math.min(1000 * Math.pow(2, reconnectAttemptCount - 1), 30000);
+            
             reconnectTimer = setTimeout(function() {
                 initializeConnection();
             }, reconnectDelay);
-            
-            // 다음 재시도에는 대기 시간을 2배로 늘림 (최대 30초까지)
-            reconnectDelay = Math.min(reconnectDelay * 2, 30000);
         } else {
             // 기존 연결 정리
             disconnect();
-            
-            // 사용자에게 알림
-            _GL.COMMON.showAlertModal({
-                type: 'error',
-                title: '연결 오류',
-                message: '알림 서비스에 연결할 수 없습니다. 페이지를 새로고침하세요.',
-                staticBackdrop: true,
-                keyboard: false, 
-                btn1: {
-                    text: '새로고침',
-                    callback: function() {
-                        window.location.reload();
-                    }
-                }
-            });
         }
-    }
-    
-    /**
-     * Remember-me 상태 확인
-     */
-    function checkRememberMeStatus() {
-        // CSRF 토큰 확인
-        if (!_GL.csrf || !_GL.csrf.token) {
-            return Promise.reject(new Error('CSRF 토큰이 없습니다.'));
-        }
-        
-        return fetch('/klums/api/notifications/check-remember-me', {
-            method: 'GET',
-            headers: {
-                'X-CSRF-TOKEN': _GL.csrf.token,
-                'Content-Type': 'application/json'
-            },
-            credentials: 'same-origin'
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('서버 응답 오류: ' + response.status);
-            }
-            return response.json();
-        })
-        .then(result => {
-            if (!result.success) {
-                throw new Error(result.message || '상태 확인 실패');
-            }
-            return result.data;
-        })
-        .catch(() => false);
     }
     
     /**
@@ -223,7 +230,10 @@ _GL.NOTIFICATION = (function() {
     function handleSessionExpiring(notification) {
         // 데이터 추출 (기본값: 5분)
         let secondsRemaining = 300;
-        
+        const title = notification.data.title;
+        const message = notification.data.message;
+        const action = notification.data.action;
+        	
         if (notification && notification.data) {
             if (typeof notification.data.secondsRemaining === 'number') {
                 secondsRemaining = notification.data.secondsRemaining;
@@ -237,10 +247,30 @@ _GL.NOTIFICATION = (function() {
             secondsRemaining = 300; // 기본값으로 재설정
         }
         
+        // 이미 세션 만료 모달이 열려있는 경우 업데이트만 함
+        if (sessionModalActive) {
+            const countdownElement = document.getElementById('sessionCountdown');
+            const progressBar = document.getElementById('sessionProgressBar');
+            const modal = document.getElementById('sessionExpiryModal');
+            
+            if (countdownElement && progressBar && modal) {
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                
+                // 타이머 업데이트
+                if (sessionTimerInterval) {
+                    clearInterval(sessionTimerInterval);
+                }
+                
+                startSessionCountdown(secondsRemaining, countdownElement, progressBar, bsModal);
+            }
+            return;
+        }
+        
         // 세션 만료 경고 모달 생성
         createSessionExpiryModal({
-            title: '세션 만료 경고',
-            message: (notification && notification.message) ? notification.message : '세션이 곧 만료됩니다. 작업을 계속하려면 세션을 연장하세요.',
+            title: title,
+            message: message,
+            action: action,
             secondsRemaining: secondsRemaining
         });
     }
@@ -260,10 +290,10 @@ _GL.NOTIFICATION = (function() {
         
         // 옵션 설정
         const secondsRemaining = options.secondsRemaining || 300;
-        const title = options.title || '세션 만료 경고';
-        const message = options.message || '세션이 곧 만료됩니다.';
-        const primaryBtnText = '세션 연장';
-        const secondaryBtnText = '로그아웃';
+        const title = options.title;
+        const message = options.message;
+        const primaryBtnText = options.action;
+        const secondaryBtnText = 'Logout';
         
         // 모달 HTML 생성
         const modalHTML = `
@@ -340,6 +370,7 @@ _GL.NOTIFICATION = (function() {
             keyboard: false
         });
         bsModal.show();
+        sessionModalActive = true;
         
         // 카운트다운 시작
         startSessionCountdown(secondsRemaining, countdownElement, progressBar, bsModal);
@@ -348,7 +379,7 @@ _GL.NOTIFICATION = (function() {
     }
     
     /**
-     * 세션 카운트다운 시작
+     * 세션 카운트다운 시작 (절대 시간 기반)
      */
     function startSessionCountdown(seconds, countdownElement, progressBar, modal) {
         // 기존 타이머 정리
@@ -361,11 +392,14 @@ _GL.NOTIFICATION = (function() {
             seconds = 300; // 기본값
         }
         
-        let remainingSeconds = seconds;
+        // 절대 시간 기준으로 만료 시점 설정 (Date.now() 사용)
+        sessionExpiryTime = Date.now() + (seconds * 1000);
         const totalSeconds = seconds;
         
         sessionTimerInterval = setInterval(function() {
-            remainingSeconds--;
+            const now = Date.now();
+            const remainingMs = sessionExpiryTime - now;
+            const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
             
             // 카운트다운 표시 업데이트
             if (countdownElement) {
@@ -386,6 +420,8 @@ _GL.NOTIFICATION = (function() {
             
             if (remainingSeconds <= 0) {
                 clearInterval(sessionTimerInterval);
+                sessionTimerInterval = null;
+                sessionModalActive = false;
                 
                 if (modal) {
                     modal.hide();
@@ -393,11 +429,7 @@ _GL.NOTIFICATION = (function() {
                 
                 // 세션 만료 처리
                 setTimeout(function() {
-                    handleSessionExpired({ 
-                        message: isRememberMeActive 
-                            ? '세션이 만료되었습니다. 페이지를 새로고침하여 계속하세요.'
-                            : '세션이 만료되었습니다. 다시 로그인해주세요.'
-                    });
+                    handleSessionExpired();
                 }, 300);
             }
         }, 1000);
@@ -407,9 +439,7 @@ _GL.NOTIFICATION = (function() {
      * 세션 연장
      */
     function extendSession() {
-        // CSRF 토큰 확인
         if (!_GL.csrf || !_GL.csrf.token) {
-            // 토큰이 없으면 조용히 페이지 새로고침
             window.location.reload();
             return;
         }
@@ -417,14 +447,18 @@ _GL.NOTIFICATION = (function() {
         fetch('/klums/api/notifications/extend-session', {
             method: 'POST',
             headers: {
-                'X-CSRF-TOKEN': _GL.csrf.token,
-                'Content-Type': 'application/json'
+                'X-CSRF-TOKEN': _GL.csrf.token
             },
             credentials: 'same-origin'
         })
         .then(response => {
+            if (response.status === 401 || response.status === 403) {
+                window.location.reload();
+                return;
+            }
+            
             if (!response.ok) {
-                throw new Error('세션 연장 실패');
+            	return;
             }
             return response.json();
         })
@@ -442,29 +476,17 @@ _GL.NOTIFICATION = (function() {
                 // 타이머 정리
                 if (sessionTimerInterval) {
                     clearInterval(sessionTimerInterval);
+                    sessionTimerInterval = null;
                 }
                 
-                // 성공 메시지 표시
-                _GL.COMMON.showToast('세션이 성공적으로 연장되었습니다.', 'success');
+                // 모달 상태 초기화
+                sessionModalActive = false;
             } else {
-                throw new Error(data.message || '세션 연장 실패');
+                window.location.reload();
             }
         })
         .catch(() => {
-            // 세션 문제 발생 시 페이지 새로고침
-            _GL.COMMON.showAlertModal({
-                type: 'error',
-                title: '세션 오류',
-                message: '세션을 연장할 수 없습니다. 페이지를 새로고침합니다.',
-                staticBackdrop: true,
-                keyboard: false, 
-                btn1: {
-                    text: '새로고침',
-                    callback: function() {
-                        window.location.reload();
-                    }
-                }
-            });
+            window.location.reload();
         });
     }
     
@@ -472,6 +494,11 @@ _GL.NOTIFICATION = (function() {
      * 세션 만료 처리
      */
     function handleSessionExpired(notification) {
+    	const title = notification.data.title;
+        const message = notification.data.message;
+        const action = notification.data.action;
+        const isRememberMe = notification.data.isRememberMe;
+        
         // 세션 만료 경고 모달 닫기
         const warningModal = document.getElementById('sessionExpiryModal');
         if (warningModal) {
@@ -481,22 +508,23 @@ _GL.NOTIFICATION = (function() {
             }
         }
         
-        // 타이머 정리
-        if (sessionTimerInterval) {
-            clearInterval(sessionTimerInterval);
-        }
+        // 모든 연결 및 타이머 정리
+        disconnect();
+        
+        // 초기화 상태 리셋 (재연결 방지)
+        initialized = false;
         
         // 세션 만료 알림 표시
         _GL.COMMON.showAlertModal({
-            type: isRememberMeActive ? 'info' : 'error',
-            title: '세션 만료',
-            message: notification && notification.message ? notification.message : '세션이 만료되었습니다.',
+            type: isRememberMe ? 'info' : 'error',
+            title: title,
+            message: message,
             staticBackdrop: true,
             keyboard: false, 
             btn1: {
-                text: isRememberMeActive ? '새로고침' : '로그인',
+                text: action,
                 callback: function() {
-                    if (isRememberMeActive) {
+                    if (isRememberMe) {
                         window.location.reload();
                     } else {
                         window.location.href = '/klums/auth/login';
@@ -510,6 +538,9 @@ _GL.NOTIFICATION = (function() {
      * 연결 종료
      */
     function disconnect() {
+        // Page Visibility API 리스너 제거
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        
         if (eventSource) {
             eventSource.close();
             eventSource = null;
@@ -518,17 +549,24 @@ _GL.NOTIFICATION = (function() {
         // 타이머 정리
         if (sessionTimerInterval) {
             clearInterval(sessionTimerInterval);
+            sessionTimerInterval = null;
         }
         
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
+            reconnectTimer = null;
         }
+        
+        // 모달 상태 초기화
+        sessionModalActive = false;
     }
     
     // 페이지 언로드 시 연결 종료
     window.addEventListener('beforeunload', disconnect);
     
-    // public API
+/* =====================================================
+    Public API
+======================================================*/
     return {
         init: function() {
             if (!initialized) {
@@ -536,8 +574,7 @@ _GL.NOTIFICATION = (function() {
                 initialized = true;
             }
             return this;
-        },
-        disconnect: disconnect
+        }
     };
 })();
 

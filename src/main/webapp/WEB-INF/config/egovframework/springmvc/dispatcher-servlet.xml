@@ -8,8 +8,9 @@
                 http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd">
                 
 	<mvc:annotation-driven>
-		<mvc:async-support default-timeout="1800000"/>
+		<mvc:async-support default-timeout="3600000"/>
 	</mvc:annotation-driven>
+	
     <context:component-scan base-package="egovframework">
         <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
         <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Service"/>

@@ -212,7 +212,7 @@
 						</div>
 						<div class="table-responsive">
 							<table class="table table-vcenter card-table">
-								<thead>
+								<thead class="sticky-top">
 									<tr>
 										<th class="w-1">No</th>
 										<th class="w-1">Target</th>
@@ -234,7 +234,8 @@
 									<a class="page-link" href="#">
 						                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
 						                    <path d="M15 6l-6 6l6 6"></path>
-						                </svg> prev
+						                </svg>
+						                prev
 						            </a>
 					            </li>
 					            <li class="page-item disabled">
@@ -242,10 +243,10 @@
 					            </li>
 					            <li class="page-item disabled">
 					            	<a class="page-link" href="#">
-					                next 
-					                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
-					                    <path d="M9 6l6 6l-6 6"></path>
-					                </svg>
+						                next 
+						                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
+						                    <path d="M9 6l6 6l-6 6"></path>
+						                </svg>
 					            	</a>
 					            </li>
 				            </ul>
@@ -253,7 +254,7 @@
 					</div>
 				</div>
 				<!-- Manage Panel -->
-				<div class="tab-pane" id="sidebar-manage">
+				<div class="tab-pane h-100" id="sidebar-manage">
 					<div class="card">
 						<div class="card-header">
 							<ul class="nav nav-tabs card-header-tabs nav-fill" data-bs-toggle="tabs">
@@ -271,17 +272,32 @@
 						<div class="card-body">
 							<div class="tab-content">
 								<div class="tab-pane active show" id="tabs-data-upload">
-									<form id="layerUploadForm" name="layerUploadForm" method="post" enctype="multipart/form-data">
-								        <!-- 프로세스 옵션 -->
+									<form id="dataUploadForm" name="dataUploadForm" method="post" enctype="multipart/form-data">
+										<!-- 업로드 유형 -->
 								        <div class="mb-3">
+								            <label class="form-label required">Upload Type</label>
+								            <div class="form-selectgroup">
+								                <label class="form-selectgroup-item">
+								                    <input type="radio" class="form-selectgroup-input" name="uploadType" value="layer" required>
+								                    <span class="form-selectgroup-label">Layer</span>
+								                </label>
+								                <label class="form-selectgroup-item">
+								                    <input type="radio" class="form-selectgroup-input" name="uploadType" value="symbol" required>
+								                    <span class="form-selectgroup-label">Symbol</span>
+								                </label>
+								            </div>
+								        </div>
+								        
+								        <!-- 프로세스 옵션 -->
+								        <div class="mb-3" id="processContainer">
 								            <label class="form-label required">Layer Processing Method</label>
 								            <div class="form-selectgroup">
 								                <label class="form-selectgroup-item">
-								                    <input type="radio" class="form-selectgroup-input" name="layerProcess" value="append" required>
+								                    <input type="radio" class="form-selectgroup-input" name="layerProcess" value="append">
 								                    <span class="form-selectgroup-label">Append to existing layer</span>
 								                </label>
 								                <label class="form-selectgroup-item">
-								                    <input type="radio" class="form-selectgroup-input" name="layerProcess" value="replace" required>
+								                    <input type="radio" class="form-selectgroup-input" name="layerProcess" value="replace">
 								                    <span class="form-selectgroup-label">Replace existing layer</span>
 								                </label>
 								            </div>
@@ -290,7 +306,7 @@
 								        <!-- 파일 업로드 영역 -->
 								        <div class="mb-3">
 											<label class="form-label required">File</label>
-											<input type="file" class="form-control" id="layerFile" name="layerFile" accept=".shp,.shx,.dbf,.prj" multiple>
+											<input type="file" class="form-control" id="dataFile" name="dataFile" multiple>
 										</div>
 								
 								        <!-- 진행 상태 표시 (업로드 시작 후 표시) -->
@@ -319,8 +335,8 @@
 								
 								        <!-- 버튼 영역 -->
 								        <div class="d-flex justify-content-end gap-2">
-								            <button type="submit" class="btn btn-primary" id="layerUploadBtn" disabled>Upload</button>
-								            <button type="button" class="btn btn-outline-secondary" id="layerClearBtn">Clear</button>
+								            <button type="submit" class="btn btn-primary" id="dataUploadBtn" disabled>Upload</button>
+								            <button type="button" class="btn btn-outline-secondary" id="dataClearBtn">Clear</button>
 								        </div>
 							    	</form>
 								</div>
@@ -382,6 +398,45 @@
 							        </div>
 								</div>
 								<div class="tab-pane" id="tabs-symbol-edit">
+								    <div class="symbol-container">
+									    <!-- 검색 및 버튼 영역 -->
+									    <div class="d-flex gap-2 mb-3">
+									        <div class="input-icon w-75">
+									            <span class="input-icon-addon">
+									                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></svg>
+									            </span>
+									            <input type="text" id="symbolSearchTerm" class="form-control" placeholder="Search symbol name">
+									        </div>
+									        <button type="button" class="btn btn-primary w-25" id="symbolCreateBtn">Create</button>
+									    </div>
+									    
+									    <!-- 테이블 영역 -->
+									    <div class="card symbol-table-container">
+									        <div class="table-responsive">
+									            <table class="table table-vcenter card-table">
+									                <thead class="sticky-top">
+									                    <tr>
+									                        <th>Code</th>
+									                        <th>Image</th>
+									                        <th>Name</th>
+									                        <th>Edit</th>
+									                    </tr>
+									                </thead>
+									                <tbody id="symbolResultTable">
+									                </tbody>
+									            </table>
+									        </div>
+									    </div>
+									    
+									    <!-- 미리보기 영역 -->
+									    <div class="symbol-preview-container">
+								            <div class="card-header">
+								                <h3 class="card-title">Preview</h3>
+								            </div>
+								            <div class="card-body d-flex justify-content-center align-items-center py-0" id="symbolPreview">
+								            </div>
+									    </div>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -487,10 +542,12 @@
 	<script src="${path}/resources/js/main/map/map-config.js"></script>
 	<script src="${path}/resources/js/main/map/map.js"></script>
 	<script src="${path}/resources/js/main/map/map-search.js" defer></script>
-	<script src="${path}/resources/js/main/map/map-upload.js" defer></script>
-	<script src="${path}/resources/js/main/map/map-edit.js" defer></script>
-	<script src="${path}/resources/js/main/map/map-symbol.js" defer></script>
 	<script src="${path}/resources/js/common/tabler/tabler.min.js" defer></script>
 	<script src="${path}/resources/js/common/tabler/demo.min.js" defer></script>
+	<sec:authorize access="hasAuthority('MAP_MANAGEMENT')">
+		<script src="${path}/resources/js/main/map/map-upload.js" defer></script>
+		<script src="${path}/resources/js/main/map/map-edit.js" defer></script>
+		<script src="${path}/resources/js/main/map/map-symbol.js" defer></script>
+	</sec:authorize>
 </body>
 </html>

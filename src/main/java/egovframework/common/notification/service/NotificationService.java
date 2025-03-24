@@ -16,27 +16,27 @@ public class NotificationService {
     
     private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
     
-    public void addEmitter(String userId, SseEmitter emitter) {
-        emitters.put(userId, emitter);
+    public void addEmitter(String username, SseEmitter emitter) {
+        emitters.put(username, emitter);
         
-        emitter.onCompletion(() -> removeEmitter(userId));
-        emitter.onTimeout(() -> removeEmitter(userId));
+        emitter.onCompletion(() -> removeEmitter(username));
+        emitter.onTimeout(() -> removeEmitter(username));
     }
     
-    public void removeEmitter(String userId) {
-        emitters.remove(userId);
+    public void removeEmitter(String username) {
+        emitters.remove(username);
     }
     
-    public void sendNotificationToUser(String userId, Object notification) {
-        SseEmitter emitter = emitters.get(userId);
+    public void sendNotificationToUser(String username, Object notification) {
+        SseEmitter emitter = emitters.get(username);
         if (emitter != null) {
             try {
                 emitter.send(SseEmitter.event()
                     .name("notification")
                     .data(notification));
             } catch (IOException e) {
-                logger.error("Notification send failed: " + userId, e);
-                removeEmitter(userId);
+                logger.error("Notification send failed: " + username, e);
+                removeEmitter(username);
             }
         }
     }

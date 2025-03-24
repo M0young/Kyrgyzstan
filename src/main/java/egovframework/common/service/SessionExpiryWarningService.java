@@ -6,13 +6,11 @@ import org.springframework.stereotype.Component;
 
 import egovframework.common.component.MessageProvider;
 import egovframework.common.component.SessionTrackingListener;
-import egovframework.common.notification.dto.NotificationDto;
 import egovframework.common.notification.service.NotificationService;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Resource;
@@ -29,16 +27,15 @@ public class SessionExpiryWarningService {
     @Resource
     private MessageProvider messageProvider;
     
-    @Value("${session.timeout.seconds:2100}")
+    @Value("${session.timeout.seconds:1800}")
     private int sessionTimeoutSeconds;
-    private static final int WARNING_SECONDS_BEFORE_EXPIRY = 300;
-    private final Map<String, Long> warnedSessions = new ConcurrentHashMap<>(); // 세션 ID, 갱신 시간 정보
+    private final Map<String, Long> warnedSessions = new ConcurrentHashMap<>();
 
     @Scheduled(fixedDelay = 60000)
     public void checkSessionsForExpiry() {
     	// 만료 임박 세션 가져오기
         List<SessionTrackingListener.SessionInfo> expiringList = 
-        		sessionTracker.getSessionsNearingExpiry(WARNING_SECONDS_BEFORE_EXPIRY);
+        		sessionTracker.getSessionsNearingExpiry(300);
         
         // 각 세션에 대해 경고 전송
         for (SessionTrackingListener.SessionInfo info : expiringList) {
@@ -66,25 +63,17 @@ public class SessionExpiryWarningService {
         
         Map<String, Object> data = new HashMap<>();
         data.put("type", "SESSION_EXPIRING");
+        data.put("title", messageProvider.getMessage("notification.session.expiring.title"));
+        data.put("message", messageProvider.getMessage("notification.session.expiring"));
+        data.put("action", messageProvider.getMessage("notification.session.action.login"));
         data.put("minutesRemaining", minutesRemaining);
         data.put("secondsRemaining", secondsRemaining);
-        data.put("message", messageProvider.getMessage("notification.session.expiring"));
-        data.put("timestamp", System.currentTimeMillis());
         
-        NotificationDto notification = new NotificationDto(
-            "SESSION_EXPIRING",
-            messageProvider.getMessage("notification.session.expiring"),
-            data
-        );
-        
-        notificationService.sendNotificationToUser(username, notification);
+        notificationService.sendNotificationToUser(username, data);
     }
     
     @Scheduled(fixedDelay = 3600000)
     public void cleanupWarnedSessions() {
-        Set<String> activeSession = sessionTracker.getActiveSession();
-        
-        // 경고가 발송된 세션 중 더 이상 활성 상태가 아닌 것들 제거
-        warnedSessions.keySet().removeIf(sessionId -> !activeSession.contains(sessionId));
+        warnedSessions.keySet().removeIf(sessionId -> !sessionTracker.isSessionTracked(sessionId));
     }
 }
